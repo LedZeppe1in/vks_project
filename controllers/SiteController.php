@@ -9,6 +9,7 @@ use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\ContactForm;
+use app\models\DriveForm;
 
 class SiteController extends Controller
 {
@@ -61,7 +62,13 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
-        return $this->render('index');
+        $googleDriveModel = new DriveForm();
+        $yandexDriveModel = new DriveForm();
+
+        return $this->render('index', [
+            'googleDriveModel' => $googleDriveModel,
+            'yandexDriveModel' => $yandexDriveModel,
+        ]);
     }
 
     /**
