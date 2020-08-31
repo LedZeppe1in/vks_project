@@ -10,6 +10,5 @@ $this->title = 'Система управления заявками и инфо
         <h1>Добро пожаловать!</h1>
     </div>
 
-    <div class="body-content">
-    </div>
+    <div class="body-content"></div>
 </div>

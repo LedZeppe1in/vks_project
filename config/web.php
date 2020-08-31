@@ -28,6 +28,7 @@ $config = [
             //'class' => 'app\components\LangUrlManager',
             'rules' => [
                 '/' => 'site/index',
+                'contact' => 'site/contact',
             ],
         ],
         'cache' => [
