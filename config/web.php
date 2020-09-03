@@ -5,7 +5,7 @@ $db = require __DIR__ . '/db.php';
 
 $config = [
     'id' => 'vks-project',
-    'name' => 'СУЗИ',
+    'name' => 'Система управления заявками и информирования',
     'defaultRoute' => 'site/index',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log'],

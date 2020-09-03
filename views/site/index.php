@@ -1,8 +1,7 @@
 <?php
 
 /* @var $this yii\web\View */
-/* @var $googleDriveModel app\models\DriveForm */
-/* @var $yandexDriveModel app\models\DriveForm */
+/* @var $cloudDriveModel app\models\CloudDriveForm */
 
 $this->title = 'Система управления заявками и информирования';
 
@@ -18,15 +17,9 @@ use yii\helpers\Html;
         <?php echo Tabs::widget([
             'items' => [
                 [
-                    'label' => 'Google-диск',
-                    'content' => $this->render('_google_drive', [
-                        'googleDriveModel' => $googleDriveModel
-                    ]),
-                ],
-                [
-                    'label' => 'Yandex-диск',
-                    'content' => $this->render('_yandex_drive', [
-                        'yandexDriveModel' => $yandexDriveModel
+                    'label' => 'Данные с облачных дисков',
+                    'content' => $this->render('_cloud_drive', [
+                        'cloudDriveModel' => $cloudDriveModel
                     ]),
                 ],
                 [
