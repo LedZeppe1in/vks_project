@@ -70,7 +70,7 @@ class SiteController extends Controller
             $urlGoogleDisk = 'https://docs.google.com/spreadsheets/d/1IW3b0wT03R8bnojqI6GnyZo2uKVsYvBy/export?format=xlsx&id=1IW3b0wT03R8bnojqI6GnyZo2uKVsYvBy';
             // Формирование URL для скачивания файла таблицы с Yandex-диска
             $urlYandexDisk  = 'https://cloud-api.yandex.net:443/v1/disk/public/resources/download?public_key=' .
-                urlencode(CloudDriveForm::YANDEX_FILE_LINK);
+                urlencode($cloudDriveModel->yandexFileLink);
             // Получение ссылки на скачивание файла таблицы с Yandex-диска
             $handle = curl_init();
             curl_setopt($handle, CURLOPT_URL, $urlYandexDisk);
@@ -82,20 +82,22 @@ class SiteController extends Controller
             $code = curl_getinfo($handle, CURLINFO_HTTP_CODE);
             // Если нет ошибки
             if ($code == 200) {
-                $res = json_decode($response, true);
+                $resource = json_decode($response, true);
+                // Пусть до папки с таблицами
+                $path = Yii::$app->basePath . '/web/spreadsheets/';
                 // Название файла таблицы, полученного с Google Sheets
-                $googleFileName = Yii::$app->basePath . '/web/google-file.xlsx';
-                // Получение содержимого Google-таблицы
-                file_put_contents($googleFileName, file_get_contents($urlGoogleDisk));
+                $googleFileName = 'google-spreadsheet.xlsx';
                 // Название файла таблицы, полученного с Yandex-диска
-                $yandexFileName = Yii::$app->basePath . '/web/yandex-file.xlsx';
+                $yandexFileName = 'yandex-spreadsheet.xlsx';
+                // Получение содержимого Google-таблицы
+                file_put_contents($path . $googleFileName, file_get_contents($urlGoogleDisk));
                 // Получение содержимого Yandex-таблицы
-                file_put_contents($yandexFileName, file_get_contents($res['href']));
+                file_put_contents($path . $yandexFileName, file_get_contents($resource['href']));
                 // Сообщение об успешной синхронизации
                 Yii::$app->getSession()->setFlash('success', 'Синхронизация прошла успешно!');
 
-                return $this->render('response', [
-                    'res' => $res,
+                return $this->render('synchronization', [
+                    'res' => $resource,
                 ]);
             } else
                 // Сообщение об ошибке
