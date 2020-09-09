@@ -5,8 +5,8 @@
 
 $this->title = 'Система управления заявками и информирования';
 
-use yii\bootstrap\Tabs;
 use yii\helpers\Html;
+use yii\bootstrap\Tabs;
 ?>
 
 <div class="site-index">
@@ -29,4 +29,5 @@ use yii\helpers\Html;
             ]
         ]); ?>
     </div>
+
 </div>
