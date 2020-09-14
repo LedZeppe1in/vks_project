@@ -2,8 +2,6 @@
 
 namespace app\controllers;
 
-use Box\Spout\Common\Entity\Style\Border;
-use Box\Spout\Writer\Common\Creator\Style\BorderBuilder;
 use Yii;
 use yii\bootstrap\ActiveForm;
 use yii\web\Response;
@@ -15,11 +13,6 @@ use app\models\ContactForm;
 use app\models\CloudDriveForm;
 use app\components\GoogleSpreadsheet;
 use app\components\YandexSpreadsheet;
-use Box\Spout\Common\Entity\Style\Color;
-use Box\Spout\Common\Entity\Style\CellAlignment;
-use Box\Spout\Writer\Common\Creator\Style\StyleBuilder;
-use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
-use Box\Spout\Writer\Common\Creator\WriterEntityFactory;
 
 class SiteController extends Controller
 {
@@ -85,7 +78,7 @@ class SiteController extends Controller
             if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
                 // Успешный ввод данных
                 $data["success"] = true;
-                // Формирование URL для скачивания файла таблицы с Yandex-диска
+                // Формирование URL для файла таблицы с Yandex-диска
                 $urlYandexDisk  = 'https://cloud-api.yandex.net:443/v1/disk/public/resources?public_key=' .
                     urlencode($cloudDriveModel->yandexFileLink);
                 // Получение ссылки на скачивание файла таблицы с Yandex-диска
@@ -125,7 +118,9 @@ class SiteController extends Controller
      * @throws \Box\Spout\Common\Exception\IOException
      * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
      * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
-     * @throws \Box\Spout\Writer\Exception\WriterNotOpenedException
+     * @throws \PhpOffice\PhpSpreadsheet\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
      */
     public function actionIndex()
     {
@@ -133,41 +128,32 @@ class SiteController extends Controller
         $cloudDriveModel = new CloudDriveForm();
         // Если загружена форма (POST-запрос)
         if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
-            // Формирование URL для скачивания файла таблицы с Google Doc
-            $urlGoogleDisk = 'https://docs.google.com/spreadsheets/d/1IW3b0wT03R8bnojqI6GnyZo2uKVsYvBy/export?format=xlsx&id=1IW3b0wT03R8bnojqI6GnyZo2uKVsYvBy';
-            // Формирование URL для скачивания файла таблицы с Yandex-диска
-            $urlYandexDisk  = 'https://cloud-api.yandex.net:443/v1/disk/public/resources/download?public_key=' .
-                urlencode($cloudDriveModel->yandexFileLink);
-            // Получение ссылки на скачивание файла таблицы с Yandex-диска
-            $handle = curl_init();
-            curl_setopt($handle, CURLOPT_URL, $urlYandexDisk);
-            curl_setopt($handle, CURLOPT_HTTPHEADER, array());
-            curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($handle);
-            $code = curl_getinfo($handle, CURLINFO_HTTP_CODE);
-            // Если нет ошибки
-            if ($code == 200) {
-                $resource = json_decode($response, true);
-                // Пусть до папки с таблицами
-                $path = Yii::$app->basePath . '/web/spreadsheets/';
-                // Название файла таблицы, полученного с Google Sheets
-                $googleFileName = 'google-spreadsheet.xlsx';
-                // Название файла таблицы, полученного с Yandex-диска
-                $yandexFileName = 'yandex-spreadsheet.xlsx';
-                // Получение содержимого Google-таблицы
-                file_put_contents($path . $googleFileName, file_get_contents($urlGoogleDisk));
-                // Получение содержимого Yandex-таблицы
-                file_put_contents($path . $yandexFileName, file_get_contents($resource['href']));
+            // Пусть до папки с таблицами
+            $path = Yii::$app->basePath . '/web/spreadsheets/';
+            // Содание объекта для работы с Google-таблицей
+            $googleSpreadsheet = new GoogleSpreadsheet();
+            // Содание объекта для работы с Yandex-таблицей
+            $yandexSpreadsheet = new YandexSpreadsheet();
+            // Копирование google-таблицы на сервер
+            $googleSpreadsheet->copySpreadsheetToServer($cloudDriveModel->googleFileLink, $path);
+            // Копирование yandex-таблицы на сервер
+            $flag = $yandexSpreadsheet->copySpreadsheetToServer($cloudDriveModel->yandexFileLink, $path);
+            // Если нет ошибки при копировании таблицы на сервер
+            if ($flag) {
+                // Получение всех строк из yandex-таблицы
+                $yandexSpreadsheetRows = $yandexSpreadsheet->getAllRows($path);
+                // Синхронизация с Yandex (поиск недостающих строк)
+                $googleSpreadsheetRows = $googleSpreadsheet->synchronize($yandexSpreadsheetRows, $path);
+                // Запись (обновление) в файла электронной таблицы недостающих строк
+                $yandexSpreadsheet->writeSpreadsheet($googleSpreadsheetRows, $path);
                 // Сообщение об успешной синхронизации
                 Yii::$app->getSession()->setFlash('success', 'Синхронизация прошла успешно!');
 
                 return $this->render('synchronization', [
-                    'res' => $resource,
+                    'res' => $googleSpreadsheetRows,
                 ]);
             } else
-                // Сообщение об ошибке
+                // Сообщение об ошибке синхронизации
                 Yii::$app->getSession()->setFlash('error', 'Ошибка синхронизации!');
         }
 

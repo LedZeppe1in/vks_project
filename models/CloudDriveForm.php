@@ -7,13 +7,13 @@ use yii\base\Model;
 class CloudDriveForm extends Model
 {
     // Ссылка на файл таблицы на Google Sheets
-    const GOOGLE_FILE_LINK     = 'https://drive.google.com/file/d/1IW3b0wT03R8bnojqI6GnyZo2uKVsYvBy/view?usp=sharing';
+    const GOOGLE_FILE_LINK     = 'https://drive.google.com/file/d/1yXDjKGhsQj69q1xi4LYBXCCZCw8ktDre/view?usp=sharing';
     // Данные для подключения к аккаунту Google
     const GOOGLE_LOGIN         = 'centrasib@gmail.com';
     const GOOGLE_PASSWORD      = 'cnhjxrf1';
 
     // Ссылка на файл таблицы на Yandex-диске
-    const YANDEX_FILE_LINK     = 'https://yadi.sk/i/0a9QyHFWieG4Og';
+    const YANDEX_FILE_LINK     = 'https://yadi.sk/i/tqG4o5-DFeFuGQ';
     // Данные для подключения к аккаунту Yandex
     const YANDEX_LOGIN         = 'info@centrasib.ru';
     const YANDEX_PASSWORD      = 'cnhjxrf1';
