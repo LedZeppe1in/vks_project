@@ -35,6 +35,35 @@ class YandexSpreadsheet
     public $newFileName = 'new-yandex-spreadsheet.xlsx'; // Название нового файла электронной таблицы на сервере после обработки
 
     /**
+     * Проверка существования файла электронной таблицы на Yandex-диске.
+     *
+     * @param $yandexFilePath - полный путь к файлу электронной таблицы на Yandex-диске
+     * @return bool|mixed - метаинформация о файле электронной таблицы от Yandex, иначе false
+     */
+    public function checkingSpreadsheet($yandexFilePath)
+    {
+        // Формирование URL для проверки файла электронной таблицы с Yandex-диска
+        $urlYandexDisk  = 'https://cloud-api.yandex.net/v1/disk/resources?path=' . urlencode($yandexFilePath);
+        // Получение URL-ссылки на файл электронной таблицы с Yandex-диска
+        $handle = curl_init();
+        curl_setopt($handle, CURLOPT_URL, $urlYandexDisk);
+        curl_setopt($handle, CURLOPT_HTTPHEADER, array('Authorization: OAuth ' . self::TOKEN));
+        curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($handle);
+        $code = curl_getinfo($handle, CURLINFO_HTTP_CODE);
+        // Если нет ошибки
+        if ($code == 200) {
+            // Получение метаинформации о файле электронной таблицы от Yandex
+            $resource = json_decode($response, true);
+
+            return $resource;
+        } else
+            return false;
+    }
+
+    /**
      * Копирование файла электронной таблицы с Yandex-диска на сервер по публичной URL-ссылке.
      *
      * @param $fileLink - публичная ссылка на файл электронной таблицы на Yandex-диске
@@ -44,7 +73,7 @@ class YandexSpreadsheet
     public function copySpreadsheetByURLToServer($fileLink, $path)
     {
         // Формирование URL для скачивания файла таблицы с Yandex-диска
-        $urlYandexDisk  = 'https://cloud-api.yandex.net:443/v1/disk/public/resources/download?public_key=' .
+        $urlYandexDisk  = 'https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=' .
             urlencode($fileLink);
         // Получение ссылки на скачивание файла таблицы с Yandex-диска
         $handle = curl_init();

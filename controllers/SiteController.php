@@ -78,24 +78,15 @@ class SiteController extends Controller
             if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
                 // Успешный ввод данных
                 $data["success"] = true;
-                // Формирование URL для файла таблицы с Yandex-диска
-                $urlYandexDisk  = 'https://cloud-api.yandex.net:443/v1/disk/public/resources?public_key=' .
-                    urlencode($cloudDriveModel->yandexFileLink);
-                // Получение ссылки на скачивание файла таблицы с Yandex-диска
-                $handle = curl_init();
-                curl_setopt($handle, CURLOPT_URL, $urlYandexDisk);
-                curl_setopt($handle, CURLOPT_HTTPHEADER, array());
-                curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
-                curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
-                $yandexResponse = curl_exec($handle);
-                $code = curl_getinfo($handle, CURLINFO_HTTP_CODE);
-                // Если нет ошибки
-                if ($code == 200) {
+                // Содание объекта для работы с Yandex-таблицей
+                $yandexSpreadsheet = new YandexSpreadsheet();
+                // Проверка существования файла электронной таблицы на Yandex-диске
+                $yandexResource = $yandexSpreadsheet->checkingSpreadsheet($cloudDriveModel->yandexFilePath);
+                // Если проверка прошла успешно (файл существует)
+                if ($yandexResource !== false) {
                     // Наличие ошибки при проверке
                     $data["checking_error"] = false;
-                    // Получение метаинформации от Yandex
-                    $yandexResource = json_decode($yandexResponse, true);
+                    // Получение метаинформации о файле электронной таблицыот от Yandex
                     $data["yandexResource"] = $yandexResource;
                 } else
                     // Наличие ошибки при проверке
