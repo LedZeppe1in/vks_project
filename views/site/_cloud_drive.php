@@ -118,8 +118,8 @@ use app\models\CloudDriveForm;
         <?= $form->field($cloudDriveModel, 'googleFileLink')
             ->textInput(['value' => CloudDriveForm::GOOGLE_FILE_LINK]) ?>
 
-        <?= $form->field($cloudDriveModel, 'yandexFileLink')
-            ->textInput(['value' => CloudDriveForm::YANDEX_FILE_LINK]) ?>
+        <?= $form->field($cloudDriveModel, 'yandexFilePath')
+            ->textInput(['value' => CloudDriveForm::YANDEX_FILE_PATH]) ?>
 
         <div class="form-group">
             <?= Button::widget([

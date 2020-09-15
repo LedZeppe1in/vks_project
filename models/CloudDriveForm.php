@@ -6,20 +6,20 @@ use yii\base\Model;
 
 class CloudDriveForm extends Model
 {
-    // Ссылка на файл таблицы на Google Sheets
-    const GOOGLE_FILE_LINK     = 'https://drive.google.com/file/d/1yXDjKGhsQj69q1xi4LYBXCCZCw8ktDre/view?usp=sharing';
+    // Ссылка на файл электронной таблицы на Google Sheets
+    const GOOGLE_FILE_LINK = 'https://drive.google.com/file/d/1yXDjKGhsQj69q1xi4LYBXCCZCw8ktDre/view?usp=sharing';
     // Данные для подключения к аккаунту Google
-    const GOOGLE_LOGIN         = 'centrasib@gmail.com';
-    const GOOGLE_PASSWORD      = 'cnhjxrf1';
+    const GOOGLE_LOGIN     = 'centrasib@gmail.com';
+    const GOOGLE_PASSWORD  = 'cnhjxrf1';
 
-    // Ссылка на файл таблицы на Yandex-диске
-    const YANDEX_FILE_LINK     = 'https://yadi.sk/i/tqG4o5-DFeFuGQ';
+    // Путь к файлу электронной таблицы на Yandex-диске
+    const YANDEX_FILE_PATH = '/ВКС/yandex-test-spreadsheet.xlsx';
     // Данные для подключения к аккаунту Yandex
-    const YANDEX_LOGIN         = 'info@centrasib.ru';
-    const YANDEX_PASSWORD      = 'cnhjxrf1';
+    const YANDEX_LOGIN     = 'info@centrasib.ru';
+    const YANDEX_PASSWORD  = 'cnhjxrf1';
 
     public $googleFileLink; // Ссылка на файл Google-таблицы
-    public $yandexFileLink; // Ссылка на файл Yandex-таблицы
+    public $yandexFilePath; // Путь к файлу Yandex-таблицы
 
     /**
      * @return array the validation rules.
@@ -27,8 +27,8 @@ class CloudDriveForm extends Model
     public function rules()
     {
         return [
-            [['googleFileLink', 'yandexFileLink'], 'required'],
-            [['googleFileLink', 'yandexFileLink'], 'string'],
+            [['googleFileLink', 'yandexFilePath'], 'required'],
+            [['googleFileLink', 'yandexFilePath'], 'string'],
         ];
     }
 
@@ -38,8 +38,8 @@ class CloudDriveForm extends Model
     public function attributeLabels()
     {
         return [
-            'googleFileLink' => 'Ссылка на файл таблицы на Google Sheets',
-            'yandexFileLink' => 'Ссылка на файл таблицы на Yandex-диске',
+            'googleFileLink' => 'Ссылка на файл электронной таблицы на Google Sheets',
+            'yandexFilePath' => 'Путь к файлу электронной таблице на Yandex-диске',
         ];
     }
 }

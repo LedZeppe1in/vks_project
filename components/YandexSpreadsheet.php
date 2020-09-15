@@ -35,13 +35,13 @@ class YandexSpreadsheet
     public $newFileName = 'new-yandex-spreadsheet.xlsx'; // Название нового файла электронной таблицы на сервере после обработки
 
     /**
-     * Копирование файла электронной таблицей с Yandex-диска на сервер.
+     * Копирование файла электронной таблицы с Yandex-диска на сервер по публичной URL-ссылке.
      *
      * @param $fileLink - публичная ссылка на файл электронной таблицы на Yandex-диске
      * @param $path - путь сохранения файла электронной таблицы на сервере
      * @return bool - успешность копирования
      */
-    public function copySpreadsheetToServer($fileLink, $path)
+    public function copySpreadsheetByURLToServer($fileLink, $path)
     {
         // Формирование URL для скачивания файла таблицы с Yandex-диска
         $urlYandexDisk  = 'https://cloud-api.yandex.net:443/v1/disk/public/resources/download?public_key=' .
@@ -55,15 +55,46 @@ class YandexSpreadsheet
         curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
         $response = curl_exec($handle);
         $code = curl_getinfo($handle, CURLINFO_HTTP_CODE);
+        curl_close($handle);
         // Если нет ошибки
         if ($code == 200) {
             $resource = json_decode($response, true);
             // Получение содержимого Yandex-таблицы
             file_put_contents($path . $this->fileName, file_get_contents($resource['href']));
+
+            return true;
         } else
             return false;
+    }
 
-        return true;
+    /**
+     * Копирование файла электронной таблицы с Yandex-диска на сервер по полному пути файла.
+     *
+     * @param $yandexFilePath - полный путь к файлу электронной таблицы на Yandex-диске
+     * @param $path - путь сохранения файла электронной таблицы на сервере
+     * @return bool - успешность копирования
+     */
+    public function copySpreadsheetByPathToServer($yandexFilePath, $path)
+    {
+        // Получение ссылки на скачивание файла таблицы с Yandex-диска
+        $handle = curl_init('https://cloud-api.yandex.net/v1/disk/resources/download?path=' .
+            urlencode($yandexFilePath));
+        curl_setopt($handle, CURLOPT_HTTPHEADER, array('Authorization: OAuth ' . self::TOKEN));
+        curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($handle, CURLOPT_HEADER, false);
+        $response = curl_exec($handle);
+        $code = curl_getinfo($handle, CURLINFO_HTTP_CODE);
+        curl_close($handle);
+        // Если нет ошибки
+        if ($code == 200) {
+            $resource = json_decode($response, true);
+            // Получение содержимого Yandex-таблицы
+            file_put_contents($path . $this->fileName, file_get_contents($resource['href']));
+
+            return true;
+        } else
+            return false;
     }
 
     /**

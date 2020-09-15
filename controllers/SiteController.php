@@ -137,7 +137,7 @@ class SiteController extends Controller
             // Копирование google-таблицы на сервер
             $googleSpreadsheet->copySpreadsheetToServer($cloudDriveModel->googleFileLink, $path);
             // Копирование yandex-таблицы на сервер
-            $copyFlag = $yandexSpreadsheet->copySpreadsheetToServer($cloudDriveModel->yandexFileLink, $path);
+            $copyFlag = $yandexSpreadsheet->copySpreadsheetByPathToServer($cloudDriveModel->yandexFilePath, $path);
             // Если нет ошибки при копировании электронной таблицы на сервер
             if ($copyFlag) {
                 // Получение всех строк из yandex-таблицы
