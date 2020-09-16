@@ -3,7 +3,9 @@
 namespace app\components;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
 
@@ -145,28 +147,13 @@ class YandexSpreadsheet
             if ($sheet->getName() === self::FIRST_SHEET_SHEET)
                 foreach ($sheet->getRowIterator() as $rowNumber => $row)
                     if ($rowNumber > 1) {
+                        // Запоминание текущей строки из электронной таблицы
                         $spreadsheetRow = array();
-                        foreach ($row->getCells() as $cellNumber => $cell) {
-                            // Добавление даты
-                            if ($cellNumber == 0)
-                                if (is_string($cell->getValue()))
-                                    array_push($spreadsheetRow, $cell->getValue());
-                                else {
-                                    $date = $cell->getValue();
-                                    array_push($spreadsheetRow, $date->format('Y-m-d'));
-                                }
-                            // Добавление адреса и вида работ
-                            if ($cellNumber == 1 || $cellNumber == 2)
+                        foreach ($row->getCells() as $cellNumber => $cell)
+                            if ($cellNumber == 0 || $cellNumber == 1 || $cellNumber == 2 ||
+                                $cellNumber == 3 || $cellNumber == 4)
                                 array_push($spreadsheetRow, $cell->getValue());
-                            // Добавление времени начала и окончания
-                            if ($cellNumber == 3 || $cellNumber == 4)
-                                if (is_string($cell->getValue()))
-                                    array_push($spreadsheetRow, $cell->getValue());
-                                else {
-                                    $date = $cell->getValue();
-                                    array_push($spreadsheetRow, $date->format('H:i'));
-                                }
-                        }
+                        // Добавление текущей строки в массив
                         array_push($spreadsheetRows, $spreadsheetRow);
                     }
         $reader->close();
@@ -191,18 +178,36 @@ class YandexSpreadsheet
         $worksheet = $spreadsheet->setActiveSheetIndexByName(self::FIRST_SHEET_SHEET);
         // Добавление новых строк в Yandex-таблицу
         foreach ($googleSpreadsheetRows as $googleSpreadsheetRow) {
+            // Добавление новой строки в конец электронной таблицы
             $row = $worksheet->getHighestRow() + 1;
             $worksheet->insertNewRowBefore($row);
+            // Определение стиля даты для ячеек с датой
+            $worksheet->getStyle('A' . $row)
+                ->getNumberFormat()
+                ->setFormatCode(NumberFormat::FORMAT_DATE_DDMMYYYY);
+            // Определение стилей времени для ячеек с временем
+            $worksheet->getStyle('D' . $row)
+                ->getNumberFormat()
+                ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
+            $worksheet->getStyle('E' . $row)
+                ->getNumberFormat()
+                ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
             // Определение значений ячеек
-            $worksheet->setCellValue('A' . $row, $googleSpreadsheetRow[0]);
+            $excelDateValue = Date::PHPToExcel($googleSpreadsheetRow[0]);
+            $worksheet->setCellValue('A' . $row, $excelDateValue);
             $worksheet->setCellValue('B' . $row, $googleSpreadsheetRow[1]);
             $worksheet->setCellValue('C' . $row, $googleSpreadsheetRow[2]);
-            $worksheet->setCellValue('D' . $row, $googleSpreadsheetRow[3]);
-            $worksheet->setCellValue('E' . $row, $googleSpreadsheetRow[4]);
+            $excelStartTimeValue = Date::PHPToExcel($googleSpreadsheetRow[3]);
+            $worksheet->setCellValue('D' . $row, $excelStartTimeValue);
+            $excelEndTimeValue = Date::PHPToExcel($googleSpreadsheetRow[4]);
+            $worksheet->setCellValue('E' . $row, $excelEndTimeValue);
             $worksheet->setCellValue('F' . $row, $googleSpreadsheetRow[5]);
-            // Задание цвета ячейки
-            $worksheet->getStyle('A'.$row.':L'.$row)->getFill()
-                ->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('dbead5');
+            // Задание цвета ячеек
+            $worksheet->getStyle('A'.$row.':L'.$row)
+                ->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()
+                ->setARGB('dbead5');
         }
         // Обновление файла Yandex-таблицы
         $writer = new Xlsx($spreadsheet);

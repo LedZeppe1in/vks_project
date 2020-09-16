@@ -135,22 +135,28 @@ class SiteController extends Controller
                 $yandexSpreadsheetRows = $yandexSpreadsheet->getAllRows($path);
                 // Синхронизация с Yandex (поиск недостающих строк)
                 $googleSpreadsheetRows = $googleSpreadsheet->synchronize($yandexSpreadsheetRows, $path);
-                // Запись нового файла электронной таблицы с недостающими строками
-                $yandexSpreadsheet->writeSpreadsheet($googleSpreadsheetRows, $path);
-                // Загрузка нового файла электронной таблицы на Yandex-диск
-                $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive($path);
-                // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
-                if ($uploadFlag) {
-                    // Сообщение об успешной синхронизации
-                    Yii::$app->getSession()->setFlash('success', 'Синхронизация прошла успешно!');
+                // Если есть новые строки из google-таблицы
+                if (!empty($googleSpreadsheetRows)) {
+                    // Запись нового файла электронной таблицы с недостающими строками
+                    $yandexSpreadsheet->writeSpreadsheet($googleSpreadsheetRows, $path);
+                    // Загрузка нового файла электронной таблицы на Yandex-диск
+                    $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive($path);
+                    // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
+                    if ($uploadFlag) {
+                        // Сообщение об успешной синхронизации
+                        Yii::$app->getSession()->setFlash('success', 'Синхронизация прошла успешно!');
 
-                    return $this->render('synchronization', [
-                        'res' => $googleSpreadsheetRows,
-                    ]);
+                        return $this->render('synchronization', [
+                            'res' => array_merge($yandexSpreadsheetRows, $googleSpreadsheetRows),
+                        ]);
+                    } else
+                        // Сообщение об ошибке синхронизации
+                        Yii::$app->getSession()->setFlash('error',
+                            'Ошибка синхронизации! При загрузке файла электронной таблицы на Yandex-диск возникли ошибки.');
                 } else
-                    // Сообщение об ошибке синхронизации
-                    Yii::$app->getSession()->setFlash('error',
-                        'Ошибка синхронизации! При загрузке файла электронной таблицы на Yandex-диск возникли ошибки.');
+                    // Сообщение о том, что синхронизация не требуется
+                    Yii::$app->getSession()->setFlash('warning',
+                        'Синхронизация не требуется! Все данные актуальны.');
             } else
                 // Сообщение об ошибке синхронизации
                 Yii::$app->getSession()->setFlash('error',

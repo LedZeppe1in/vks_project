@@ -68,50 +68,24 @@ class GoogleSpreadsheet
             if ($sheet->getName() === GoogleSpreadsheet::REQUESTS_SHEET)
                 foreach ($sheet->getRowIterator() as $rowNumber => $row)
                     if ($rowNumber > 1) {
-                        $currentRow = array();
-                        foreach ($row->getCells() as $cellNumber => $cell) {
-                            // Добавление даты
-                            if ($cellNumber == 1) {
-                                $date = $cell->getValue();
-                                array_push($currentRow, $date->format('Y-m-d'));
-                            }
-                            // Добавление адреса и вида работ
-                            if ($cellNumber == 3 || $cellNumber == 5)
-                                array_push($currentRow, $cell->getValue());
-                            // Добавление времени начала и окончания
-                            if ($cellNumber == 7 || $cellNumber == 8) {
-                                $date = $cell->getValue();
-                                array_push($currentRow, $date->format('H:i'));
-                            }
-                        }
-                        // Проверка совпадания строки
+                        // Запоминание текущей строки из google-таблицы
+                        $googleSpreadsheetRow = array();
+                        foreach ($row->getCells() as $cellNumber => $cell)
+                            if ($cellNumber == 1 || $cellNumber == 3 || $cellNumber == 5 ||
+                                $cellNumber == 7 || $cellNumber == 8 || $cellNumber == 9)
+                                array_push($googleSpreadsheetRow, $cell->getValue());
+                        // Проверка совпадания строки из yandex-таблицы
                         $equality = false;
                         foreach ($yandexSpreadsheetRows as $yandexSpreadsheetRow)
-                            if ($yandexSpreadsheetRow[0] === $currentRow[0] &&
-                                $yandexSpreadsheetRow[1] === $currentRow[1] &&
-                                $yandexSpreadsheetRow[2] === $currentRow[2] &&
-                                $yandexSpreadsheetRow[3] === $currentRow[3] &&
-                                $yandexSpreadsheetRow[4] === $currentRow[4])
+                            if ($yandexSpreadsheetRow[0] == $googleSpreadsheetRow[0] &&
+                                $yandexSpreadsheetRow[1] == $googleSpreadsheetRow[1] &&
+                                $yandexSpreadsheetRow[2] == $googleSpreadsheetRow[2] &&
+                                $yandexSpreadsheetRow[3] == $googleSpreadsheetRow[3] &&
+                                $yandexSpreadsheetRow[4] == $googleSpreadsheetRow[4])
                                 $equality = true;
-                        $googleSpreadsheetRow = array();
-                        if (!$equality) {
-                            foreach ($row->getCells() as $cellNumber => $cell) {
-                                // Добавление даты
-                                if ($cellNumber == 1) {
-                                    $date = $cell->getValue();
-                                    array_push($googleSpreadsheetRow, $date->format('d.m.Y'));
-                                }
-                                // Добавление адреса, вида работ и кол-ва часов
-                                if ($cellNumber == 3 || $cellNumber == 5 || $cellNumber == 9)
-                                    array_push($googleSpreadsheetRow, $cell->getValue());
-                                // Добавление времени начала и окончания
-                                if ($cellNumber == 7 || $cellNumber == 8) {
-                                    $date = $cell->getValue();
-                                    array_push($googleSpreadsheetRow, $date->format('H:i:s'));
-                                }
-                            }
-                        }
-                        array_push($googleSpreadsheetRows, $googleSpreadsheetRow);
+                        // Если совпадения нет, то добавление текущей строки в массив
+                        if ($equality == false)
+                            array_push($googleSpreadsheetRows, $googleSpreadsheetRow);
                     }
         $reader->close();
 

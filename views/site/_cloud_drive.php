@@ -131,7 +131,7 @@ use app\models\CloudDriveForm;
                     'style' => 'margin:5px'
                 ]
             ]); ?>
-            <?= Html::submitButton('<span class="glyphicon glyphicon-refresh"></span> Синхронизировать',
+            <?= Html::submitButton('<span class="glyphicon glyphicon-refresh"></span> Синхронизировать с Яндекс-диском',
                 ['class' => 'btn btn-success', 'name' => 'synchronization-button']); ?>
         </div>
 
