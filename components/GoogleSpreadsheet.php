@@ -50,31 +50,38 @@ class GoogleSpreadsheet
     }
 
     /**
-     * Синхронизация с Yandex (поиск всех строк из google-таблицы, которых нет в yandex-таблице).
+     * Синхронизация с Yandex (поиск всех строк из Google-таблицы, которых нет в Yandex-таблице).
      *
      * @param $yandexSpreadsheetRows - массив всех строк электронной таблицы Yandex
      * @param $path - путь к файлу электронной таблицы на сервере
-     * @return array - массив строк, которых нет в электронной таблице Yandex
+     * @return array - массив из: массива строк, которых нет в электронной таблице Yandex,
+     *                            массива с номерами строк из Yandex-таблицы, которые необходимо удалить
      * @throws \Box\Spout\Common\Exception\IOException
      * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
      * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
      */
-    public function synchronize($yandexSpreadsheetRows, $path)
+    public function synchronizeWithYandex($yandexSpreadsheetRows, $path)
     {
+        // Массив для всех строк из Google-таблицы
+        $allGoogleSpreadsheetRows = array();
+        // Массив для строк, которых нет в Yandex-таблице
         $googleSpreadsheetRows = array();
+        // Массив для номеров строк из Yandex-таблицы, которые необходимо удалить
+        $yandexSpreadsheetDeletedRows = array();
+        // Чтение Google-таблицы
         $reader = ReaderEntityFactory::createReaderFromFile($path . $this->fileName);
         $reader->open($path . $this->fileName);
         foreach ($reader->getSheetIterator() as $sheet)
             if ($sheet->getName() === GoogleSpreadsheet::REQUESTS_SHEET)
                 foreach ($sheet->getRowIterator() as $rowNumber => $row)
                     if ($rowNumber > 1) {
-                        // Запоминание текущей строки из google-таблицы
+                        // Запоминание текущей строки из Google-таблицы
                         $googleSpreadsheetRow = array();
                         foreach ($row->getCells() as $cellNumber => $cell)
                             if ($cellNumber == 1 || $cellNumber == 3 || $cellNumber == 5 ||
                                 $cellNumber == 7 || $cellNumber == 8 || $cellNumber == 9)
                                 array_push($googleSpreadsheetRow, $cell->getValue());
-                        // Проверка совпадания строки из yandex-таблицы
+                        // Проверка совпадания строки из Yandex-таблицы
                         $equality = false;
                         foreach ($yandexSpreadsheetRows as $yandexSpreadsheetRow)
                             if ($yandexSpreadsheetRow[0] == $googleSpreadsheetRow[0] &&
@@ -86,9 +93,22 @@ class GoogleSpreadsheet
                         // Если совпадения нет, то добавление текущей строки в массив
                         if ($equality == false)
                             array_push($googleSpreadsheetRows, $googleSpreadsheetRow);
+                        // Формирование массива со всеми строками из Google-таблицы
+                        array_push($allGoogleSpreadsheetRows, $googleSpreadsheetRow);
                     }
         $reader->close();
+        // Формирование массива с номерами строк из Yandex-таблицы, которые необходимо удалить
+        foreach ($yandexSpreadsheetRows as $yKey => $yRow)
+            if ($yRow[0] != null && $yRow[1] != null && $yRow[2] != null && $yRow[3] != null && $yRow[4] != null) {
+                $equality = false;
+                foreach ($allGoogleSpreadsheetRows as $gRow)
+                    if ($yRow[0] == $gRow[0] && $yRow[1] == $gRow[1] && $yRow[2] == $gRow[2]
+                        && $yRow[3] == $gRow[3] && $yRow[4] == $gRow[4])
+                        $equality = true;
+                if ($equality == false)
+                    array_push($yandexSpreadsheetDeletedRows, $yKey);
+            }
 
-        return $googleSpreadsheetRows;
+        return array($googleSpreadsheetRows, $yandexSpreadsheetDeletedRows);
     }
 }

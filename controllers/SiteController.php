@@ -4,6 +4,7 @@ namespace app\controllers;
 
 use Yii;
 use yii\bootstrap\ActiveForm;
+use yii\data\ArrayDataProvider;
 use yii\web\Response;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
@@ -134,11 +135,12 @@ class SiteController extends Controller
                 // Получение всех строк из yandex-таблицы
                 $yandexSpreadsheetRows = $yandexSpreadsheet->getAllRows($path);
                 // Синхронизация с Yandex (поиск недостающих строк)
-                $googleSpreadsheetRows = $googleSpreadsheet->synchronize($yandexSpreadsheetRows, $path);
+                list($googleSpreadsheetRows, $yandexSpreadsheetDeletedRows) = $googleSpreadsheet
+                    ->synchronizeWithYandex($yandexSpreadsheetRows, $path);
                 // Если есть новые строки из google-таблицы
-                if (!empty($googleSpreadsheetRows)) {
+                if (!empty($googleSpreadsheetRows) || !empty($yandexSpreadsheetDeletedRows)) {
                     // Запись нового файла электронной таблицы с недостающими строками
-                    $yandexSpreadsheet->writeSpreadsheet($googleSpreadsheetRows, $path);
+                    $yandexSpreadsheet->writeSpreadsheet($googleSpreadsheetRows, $yandexSpreadsheetDeletedRows, $path);
                     // Загрузка нового файла электронной таблицы на Yandex-диск
                     $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive($path);
                     // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
@@ -146,8 +148,52 @@ class SiteController extends Controller
                         // Сообщение об успешной синхронизации
                         Yii::$app->getSession()->setFlash('success', 'Синхронизация прошла успешно!');
 
+                        // Формирование массива удаленных строк для вывода на экран
+                        $yandexArray = array();
+                        foreach ($yandexSpreadsheetRows as $foo => $yandexSpreadsheetRow)
+                            foreach ($yandexSpreadsheetDeletedRows as $rowNumber)
+                                if ($foo == $rowNumber) {
+                                    $arrayRow = array();
+                                    foreach ($yandexSpreadsheetRow as $key => $yandexSpreadsheetCell) {
+                                        if ($key == 0)
+                                            array_push($arrayRow, $yandexSpreadsheetCell->format('d.m.Y'));
+                                        if ($key == 1 || $key == 2)
+                                            array_push($arrayRow, $yandexSpreadsheetCell);
+                                        if ($key == 3 || $key == 4)
+                                            array_push($arrayRow, $yandexSpreadsheetCell->format('H:m'));
+                                    }
+                                    array_push($yandexArray, $arrayRow);
+                                }
+                        $deletedRows = new ArrayDataProvider([
+                            'allModels' => $yandexArray,
+                            'pagination' => [
+                                'pageSize' => 10000,
+                            ],
+                        ]);
+                        // Формирование массива добавленных строк для вывода на экран
+                        $googleArray = array();
+                        foreach ($googleSpreadsheetRows as $googleSpreadsheetRow) {
+                            $arrayRow = array();
+                            foreach ($googleSpreadsheetRow as $key => $googleSpreadsheetCell) {
+                                if ($key == 0)
+                                    array_push($arrayRow, $googleSpreadsheetCell->format('d.m.Y'));
+                                if ($key == 1 || $key == 2 || $key == 5)
+                                    array_push($arrayRow, $googleSpreadsheetCell);
+                                if ($key == 3 || $key == 4)
+                                    array_push($arrayRow, $googleSpreadsheetCell->format('H:m'));
+                            }
+                            array_push($googleArray, $arrayRow);
+                        }
+                        $addedRows = new ArrayDataProvider([
+                            'allModels' => $googleArray,
+                            'pagination' => [
+                                'pageSize' => 10000,
+                            ],
+                        ]);
+
                         return $this->render('synchronization', [
-                            'res' => array_merge($yandexSpreadsheetRows, $googleSpreadsheetRows),
+                            'deletedRows' => $deletedRows,
+                            'addedRows' => $addedRows,
                         ]);
                     } else
                         // Сообщение об ошибке синхронизации
