@@ -132,7 +132,9 @@ use app\models\CloudDriveForm;
                 ]
             ]); ?>
             <?= Html::submitButton('<span class="glyphicon glyphicon-refresh"></span> Синхронизировать с Яндекс-диском',
-                ['class' => 'btn btn-success', 'name' => 'synchronization-button']); ?>
+                ['class' => 'btn btn-success', 'name' => 'synchronization-button', 'value' => 'yandex-synchronization']); ?>
+            <?= Html::submitButton('<span class="glyphicon glyphicon-refresh"></span> Синхронизировать с  Google-диском',
+                ['class' => 'btn btn-success', 'name' => 'synchronization-button', 'value' => 'google-synchronization']); ?>
         </div>
 
         <?php ActiveForm::end(); ?>

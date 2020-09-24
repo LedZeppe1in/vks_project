@@ -3,10 +3,10 @@
 namespace app\components;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
 
 /**
@@ -266,5 +266,56 @@ class YandexSpreadsheet
                 return false;
         } else
             return false;
+    }
+
+    /**
+     * Синхронизация с Google (поиск всех строк с проставленными табельными номерами и сотрудниками из Yandex-таблицы,
+     * которых нет в Google-таблице).
+     *
+     * @param $googleSpreadsheetRows - массив всех строк электронной таблицы Google
+     * @param $path - путь к файлу электронной таблицы на сервере
+     * @return array - массив строк с проставленными табельными номерами и сотрудниками,
+     * которых нет в электронной таблице Google
+     * @throws \Box\Spout\Common\Exception\IOException
+     * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
+     * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
+     */
+    public function syncWithGoogle($googleSpreadsheetRows, $path)
+    {
+        // Массив для строк с табельными номерами, которых нет в Google-таблице
+        $yandexSpreadsheetRows = array();
+        // Чтение Yandex-таблицы
+        $reader = ReaderEntityFactory::createReaderFromFile($path . $this->fileName);
+        $reader->open($path . $this->fileName);
+        foreach ($reader->getSheetIterator() as $sheet)
+            if ($sheet->getName() === self::FIRST_SHEET_SHEET)
+                foreach ($sheet->getRowIterator() as $rowNumber => $row)
+                    if ($rowNumber > 1) {
+                        // Запоминание текущей строки из Yandex-таблицы
+                        $yandexSpreadsheetRow = array();
+                        foreach ($row->getCells() as $cellNumber => $cell)
+                            if ($cellNumber == 0 || $cellNumber == 1 || $cellNumber == 2 || $cellNumber == 3 ||
+                                $cellNumber == 4 || $cellNumber == 5 || $cellNumber == 6 || $cellNumber == 7)
+                                array_push($yandexSpreadsheetRow, $cell->getValue());
+                        // Обход всех строк Google-таблицы
+                        foreach ($googleSpreadsheetRows as $googleSpreadsheetKey => $googleSpreadsheetRow)
+                            // Проверка совпадания составного ключа строки из Google-таблицы и проверка на табельный номер
+                            if ($googleSpreadsheetRow[0] == $yandexSpreadsheetRow[0] &&
+                                $googleSpreadsheetRow[1] == $yandexSpreadsheetRow[1] &&
+                                $googleSpreadsheetRow[2] == $yandexSpreadsheetRow[2] &&
+                                $googleSpreadsheetRow[3] == $yandexSpreadsheetRow[3] &&
+                                $googleSpreadsheetRow[4] == $yandexSpreadsheetRow[4] &&
+                                $googleSpreadsheetRow[5] != $yandexSpreadsheetRow[6])
+                                // Если массив не содержит строку из Yandex-таблицы для указанного ключа из Google-таблицы
+                                if (!array_key_exists($googleSpreadsheetKey, $yandexSpreadsheetRows)) {
+                                    // Добавление в массив строки из Yandex-таблицы
+                                    $yandexSpreadsheetRows[$googleSpreadsheetKey] = $yandexSpreadsheetRow;
+                                    // Выход из цикла
+                                    break;
+                                }
+                    }
+        $reader->close();
+
+        return $yandexSpreadsheetRows;
     }
 }

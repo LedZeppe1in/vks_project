@@ -2,6 +2,12 @@
 
 namespace app\components;
 
+use Exception;
+use Google_Client;
+use Google_Service_Drive;
+use Google_Service_Drive_DriveFile;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
 
 /**
@@ -30,23 +36,241 @@ class GoogleSpreadsheet
     const EMPLOYEE_ID_HEADING              = 'табельный номер';
     const REQUEST_ADJUSTMENTS_HEADING      = 'Корректировки заявок';
 
-    public $fileName = 'google-spreadsheet.xlsx'; // Название файла с электронной таблицей на сервере
+    public $oauthCredentials = 'client_id.json';         // Название файла с учетными данными от Google
+    public $tokenFileName = 'token.json';                // Название файла с token от Google
+    public $fileName = 'google-spreadsheet.xlsx';        // Название файла с электронной таблицей на сервере
+    public $newFileName = 'new-google-spreadsheet.xlsx'; // Название нового файла электронной таблицы на сервере после обработки
+
+    /**
+     * Получение id файла по публичной ссылке на файл электронной таблицы на Google-диске.
+     *
+     * @param $fileLink - публичная ссылка на файл электронной таблицы на Google-диске
+     * @return mixed
+     */
+    public static function getFileID($fileLink)
+    {
+        $needle1 = 'https://drive.google.com/file/d/';
+        $needle2 = '/view?usp=sharing';
+        $str = str_replace($needle1, '', $fileLink);
+        $fileId = str_replace($needle2, '', $str);
+
+        return $fileId;
+    }
+
+    /**
+     * Получение токена для Google Drive API.
+     *
+     * @param $oauthPath - путь к файлу учетных данных для Google Drive API
+     * @throws \Google_Exception
+     */
+    function getToken($oauthPath)
+    {
+        $client = new Google_Client();
+        $client->setApplicationName('vks-project');
+        $client->setScopes(Google_Service_Drive::DRIVE);
+        $client->setAuthConfig($oauthPath . $this->oauthCredentials);
+        $client->setRedirectUri('http://localhost');
+        $client->setAccessType('offline');
+        $client->setPrompt('select_account consent');
+        // Load previously authorized token from a file, if it exists.
+        // The file token.json stores the user's access and refresh tokens, and is
+        // created automatically when the authorization flow completes for the first time.
+        if (file_exists($oauthPath . $this->tokenFileName)) {
+            $accessToken = json_decode(file_get_contents($oauthPath . $this->tokenFileName), true);
+            $client->setAccessToken($accessToken);
+        }
+        // If there is no previous token or it's expired.
+        if ($client->isAccessTokenExpired()) {
+            // Refresh the token if possible, else fetch a new one.
+            if ($client->getRefreshToken())
+                $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+            else {
+                // Request authorization from the user.
+                $authUrl = $client->createAuthUrl();
+                printf("Open the following link in your browser:\n%s\n", $authUrl);
+                print 'Enter verification code: ';
+                $authCode = trim(fgets(STDIN));
+                // Exchange authorization code for an access token.
+                $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
+                $client->setAccessToken($accessToken);
+                // Check to see if there was an error.
+                if (array_key_exists('error', $accessToken)) {
+                    throw new Exception(join(', ', $accessToken));
+                }
+            }
+            // Save the token to a file.
+            if (!file_exists(dirname($oauthPath . $this->tokenFileName)))
+                mkdir(dirname($oauthPath . $this->tokenFileName), 0700, true);
+            file_put_contents($oauthPath . $this->tokenFileName, json_encode($client->getAccessToken()));
+        }
+    }
+
+    /**
+     * Загрузка нового файла электронной таблицы на Google-диск.
+     *
+     * @param $oauthPath - путь к файлам авторизации (учетным данным и токену) для Google Drive API
+     * @param $session - текущая сессия пользователя
+     * @param $filePath - путь к файлу электронной таблицы на сервере
+     * @return mixed|string
+     * @throws \Google_Exception
+     */
+    function uploadSpreadsheetToGoogleDrive($oauthPath, $session, $filePath)
+    {
+        $client = new Google_Client();
+        $client->setAuthConfig($oauthPath . $this->oauthCredentials);
+        $client->setRedirectUri('http://localhost');
+        $client->addScope(Google_Service_Drive::DRIVE);
+        // Автоматическое обновление токена
+        $client->setAccessType('offline');
+        $client->setApprovalPrompt('force');
+//        if ($client->isAccessTokenExpired())
+//            $client->revokeToken();
+        // Если токен уже в сессии, то он мог быть обновлен - сохранение его в json-файл
+        if ($session->get('upload_token')) {
+            $fh = fopen($oauthPath . $this->tokenFileName, 'w');
+            fwrite($fh, json_encode($session->get('upload_token')));
+            fclose($fh);
+        } else
+            // Если токена еще нет в сессии, то получение его из json-файла и добавление в сессию
+            $session->set('upload_token',
+                json_decode(file_get_contents($oauthPath . $this->tokenFileName), true));
+        // Установка токена
+        $client->setAccessToken($session->get('upload_token'));
+        // Если токен установлен
+        if ($client->getAccessToken()) {
+            $drive = new Google_Service_Drive($client);
+            $fileList = $drive->files->listFiles();
+            $flag = false;
+            foreach ($fileList['files'] as $file)
+                if ($file['name'] == $this->newFileName) {
+                    $emptyFile = new Google_Service_Drive_DriveFile();
+                    $drive->files->update($file['id'], $emptyFile, array(
+                        'data' => file_get_contents($filePath . $this->newFileName),
+                        'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        'uploadType' => 'multipart'
+                    ));
+                    $flag = true;
+                }
+            if (!$flag) {
+                // Копирование в корень Google-диска файл электронной таблицы
+                $fileArray = array('data' => file_get_contents($filePath . $this->newFileName),
+                    'mimeType' => 'application/octet-stream', 'uploadType' => 'multipart');
+                $file = new Google_Service_Drive_DriveFile();
+                $file->setName($this->newFileName);
+                $drive->files->create($file, $fileArray);
+            }
+
+            return $fileList['files'];
+
+        } else
+            return 'Нет подключения!';
+    }
+
+    /**
+     * Проверка существования файла электронной таблицы на Google-диске.
+     *
+     * @param $oauthPath - путь к файлам авторизации (учетным данным и токену) для Google Drive API
+     * @param $session - текущая сессия пользователя
+     * @param $fileLink - публичная ссылка на файл электронной таблицы на Google-диске
+     * @return array|bool - метаинформация о файле электронной таблицы от Google, иначе false
+     * @throws \Google_Exception
+     */
+    public function checkingSpreadsheet($oauthPath, $session, $fileLink)
+    {
+        $client = new Google_Client();
+        $client->setAuthConfig($oauthPath . $this->oauthCredentials);
+        $client->setRedirectUri('http://localhost');
+        $client->addScope(Google_Service_Drive::DRIVE);
+        // Автоматическое обновление токена
+        $client->setAccessType('offline');
+        $client->setApprovalPrompt('force');
+        // Если токен уже в сессии, то он мог быть обновлен - сохранение его в json-файл
+        if ($session->get('upload_token')) {
+            $fh = fopen($oauthPath . $this->tokenFileName, 'w');
+            fwrite($fh, json_encode($session->get('upload_token')));
+            fclose($fh);
+        } else
+            // Если токена еще нет в сессии, то получение его из json-файла и добавление в сессию
+            $session->set('upload_token',
+                json_decode(file_get_contents($oauthPath . $this->tokenFileName), true));
+        // Установка токена
+        $client->setAccessToken($session->get('upload_token'));
+        // Если токен установлен
+        if ($client->getAccessToken()) {
+            $resource = array();
+            // Получение id файла по публичной ссылке на файл электронной таблицы на Google-диске
+            $fileId = self::getFileID($fileLink);
+            // Инициализация объекта Google-диска
+            $drive = new Google_Service_Drive($client);
+            // Получение списка всех файлов и каталогов на Google-диске
+            $fileList = $drive->files->listFiles();
+            // Обход всех файлов и каталогов на Google-диске
+            foreach ($fileList['files'] as $file)
+                if ($file['id'] == $fileId)
+                    // Получение метаинформации о файле электронной таблицы от Google
+                    $resource = $file;
+
+            return $resource;
+
+        } else
+            return false;
+    }
 
     /**
      * Копирование файла электронной таблицей с Yandex-диска на сервер.
      *
-     * @param $fileLink - публичная ссылка на файл электронной таблицы на Yandex-диске
+     * @param $fileLink - публичная ссылка на файл электронной таблицы на Google-диске
      * @param $path - путь сохранения файла электронной таблицы на сервере
      * @return bool - успешность копирования
      */
     public function copySpreadsheetToServer($fileLink, $path)
     {
+        // Получение id файла по публичной ссылке на файл электронной таблицы на Google-диске
+        $fileId = self::getFileID($fileLink);
         // Формирование URL для скачивания файла таблицы с Google Doc
-        $urlGoogleDisk = 'https://docs.google.com/spreadsheets/d/1yXDjKGhsQj69q1xi4LYBXCCZCw8ktDre/export?format=xlsx&id=1yXDjKGhsQj69q1xi4LYBXCCZCw8ktDre';
-        // Получение содержимого Google-таблицы
-        file_put_contents($path . $this->fileName, file_get_contents($urlGoogleDisk));
+        $urlGoogleDisk = 'https://docs.google.com/spreadsheets/d/' . $fileId . '/export?format=xlsx&id=' . $fileId;
+        try {
+            // Получение содержимого Google-таблицы
+            file_put_contents($path . $this->fileName, file_get_contents($urlGoogleDisk));
 
-        return true;
+            return true;
+        }
+        catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Получение всех строк электронной таблицы.
+     *
+     * @param $path - путь к файлу электронной таблицы на сервере
+     * @return array - массив считанных строк таблицы
+     * @throws \Box\Spout\Common\Exception\IOException
+     * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
+     * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
+     */
+    public function getAllRows($path)
+    {
+        $spreadsheetRows = array();
+        $reader = ReaderEntityFactory::createReaderFromFile($path . $this->fileName);
+        $reader->setShouldPreserveEmptyRows(true);
+        $reader->open($path . $this->fileName);
+        foreach ($reader->getSheetIterator() as $sheet)
+            if ($sheet->getName() === self::REQUESTS_SHEET)
+                foreach ($sheet->getRowIterator() as $rowNumber => $row)
+                    if ($rowNumber > 1) {
+                        // Запоминание текущей строки из электронной таблицы
+                        $spreadsheetRow = array();
+                        foreach ($row->getCells() as $cellNumber => $cell)
+                            if ($cellNumber == 1 || $cellNumber == 3 || $cellNumber == 5 ||
+                                $cellNumber == 7 || $cellNumber == 8 || $cellNumber == 10)
+                                array_push($spreadsheetRow, $cell->getValue());
+                        // Добавление текущей строки в массив
+                        $spreadsheetRows[$rowNumber] = $spreadsheetRow;
+                    }
+        $reader->close();
+
+        return $spreadsheetRows;
     }
 
     /**
@@ -60,7 +284,7 @@ class GoogleSpreadsheet
      * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
      * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
      */
-    public function synchronizeWithYandex($yandexSpreadsheetRows, $path)
+    public function syncWithYandex($yandexSpreadsheetRows, $path)
     {
         // Массив для всех строк из Google-таблицы
         $allGoogleSpreadsheetRows = array();
@@ -72,7 +296,7 @@ class GoogleSpreadsheet
         $reader = ReaderEntityFactory::createReaderFromFile($path . $this->fileName);
         $reader->open($path . $this->fileName);
         foreach ($reader->getSheetIterator() as $sheet)
-            if ($sheet->getName() === GoogleSpreadsheet::REQUESTS_SHEET)
+            if ($sheet->getName() === self::REQUESTS_SHEET)
                 foreach ($sheet->getRowIterator() as $rowNumber => $row)
                     if ($rowNumber > 1) {
                         // Запоминание текущей строки из Google-таблицы
@@ -110,5 +334,30 @@ class GoogleSpreadsheet
             }
 
         return array($googleSpreadsheetRows, $yandexSpreadsheetDeletedRows);
+    }
+
+    /**
+     * Запись обновленной электронной таблицы в файл.
+     *
+     * @param $yandexSpreadsheetRows - массив найденных строк с табельными номерами из Yandex-таблицы для обновления
+     * @param $path - путь к файлу электронной таблицы на сервере
+     * @throws \PhpOffice\PhpSpreadsheet\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
+     */
+    public function writeSpreadsheet($yandexSpreadsheetRows, $path)
+    {
+        // Чтение Google-таблицы
+        $reader = IOFactory::createReader("Xlsx");
+        $spreadsheet = $reader->load($path . $this->fileName);
+        $worksheet = $spreadsheet->setActiveSheetIndexByName(self::REQUESTS_SHEET);
+        // Если массив с найденными строками в Yandex-таблице не пустой
+        if (!empty($yandexSpreadsheetRows))
+            // Обновление строк в Google-таблице (подстановка табельных номеров)
+            foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow)
+                $worksheet->setCellValue('K' . $googleSpreadsheetKey, $yandexSpreadsheetRow[6]);
+        // Обновление файла Google-таблицы
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($path . $this->newFileName);
     }
 }
