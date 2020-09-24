@@ -64,6 +64,7 @@ class SiteController extends Controller
      * Проверка файлов электронных таблиц на Google Sheet и Yandex-диске.
      *
      * @return bool|\yii\console\Response|Response
+     * @throws \Google_Exception
      */
     public function actionChecking()
     {
@@ -80,15 +81,27 @@ class SiteController extends Controller
             if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
                 // Успешный ввод данных
                 $data["success"] = true;
+                // Содание объекта для работы с Google-таблицей
+                $googleSpreadsheet = new GoogleSpreadsheet();
                 // Содание объекта для работы с Yandex-таблицей
                 $yandexSpreadsheet = new YandexSpreadsheet();
+                // Пусть до папки с учетными данными Google
+                $oauthPath = Yii::$app->basePath . '/web/google-oauth/';
+                // Проверка существования файла электронной таблицы на Google-диске
+                $googleResource = $googleSpreadsheet->checkingSpreadsheet(
+                    $oauthPath,
+                    Yii::$app->session,
+                    $cloudDriveModel->googleFileLink
+                );
                 // Проверка существования файла электронной таблицы на Yandex-диске
                 $yandexResource = $yandexSpreadsheet->checkingSpreadsheet($cloudDriveModel->yandexFilePath);
-                // Если проверка прошла успешно (файл существует)
-                if ($yandexResource !== false) {
+                // Если проверка прошла успешно (файлы существуют)
+                if ($googleResource !== false && $yandexResource !== false) {
                     // Наличие ошибки при проверке
                     $data["checking_error"] = false;
-                    // Получение метаинформации о файле электронной таблицыот от Yandex
+                    // Получение метаинформации о файле электронной таблицы от Google
+                    $data["googleResource"] = $googleResource;
+                    // Получение метаинформации о файле электронной таблицы от Yandex
                     $data["yandexResource"] = $yandexResource;
                 } else
                     // Наличие ошибки при проверке
@@ -111,6 +124,7 @@ class SiteController extends Controller
      * @throws \Box\Spout\Common\Exception\IOException
      * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
      * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
+     * @throws \Google_Exception
      * @throws \PhpOffice\PhpSpreadsheet\Exception
      * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
      * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
@@ -211,12 +225,11 @@ class SiteController extends Controller
                             } else
                                 // Сообщение об ошибке синхронизации
                                 Yii::$app->getSession()->setFlash('error',
-                                    'Ошибка синхронизации! При загрузке файла электронной таблицы на Yandex-диск возникли ошибки.');
+                                    'Ошибка синхронизации! При загрузке файла электронной таблицы на Yandex-диск возникла ошибка.');
                         } else
                             // Сообщение о том, что синхронизация не требуется
                             Yii::$app->getSession()->setFlash('warning',
                                 'Синхронизация не требуется! Все данные актуальны.');
-
                         break;
                     // Если нажата кнопка синхронизации с Google-диском
                     case 'google-synchronization':
@@ -226,38 +239,47 @@ class SiteController extends Controller
                         $yandexSpreadsheetRows = $yandexSpreadsheet->syncWithGoogle($googleSpreadsheetRows, $path);
                         // Запись нового файла электронной таблицы с обновленными табельными номерами
                         $googleSpreadsheet->writeSpreadsheet($yandexSpreadsheetRows, $path);
-
+                        // Пусть до папки с учетными данными Google
                         $oauthPath = Yii::$app->basePath . '/web/google-oauth/';
-                        $res = $googleSpreadsheet->uploadSpreadsheetToGoogleDrive($oauthPath, Yii::$app->session, $path);
-
-                        // Формирование массива добавленных строк для вывода на экран
-                        $yandexArray = array();
-                        foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {
-                            $arrayRow = array();
-                            foreach ($yandexSpreadsheetRow as $key => $yandexSpreadsheetCell) {
-                                if ($key == 0)
-                                    array_push($arrayRow, $yandexSpreadsheetCell->format('d.m.Y'));
-                                if ($key == 1 || $key == 2 || $key == 5 || $key == 6 || $key == 7)
-                                    array_push($arrayRow, $yandexSpreadsheetCell);
-                                if ($key == 3 || $key == 4)
-                                    array_push($arrayRow, $yandexSpreadsheetCell->format('H:m'));
+                        // Загрузка нового файла электронной таблицы на Google-диск
+                        $uploadFlag = $googleSpreadsheet->uploadSpreadsheetToGoogleDrive(
+                            $oauthPath,
+                            Yii::$app->session,
+                            $path
+                        );
+                        // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
+                        if ($uploadFlag) {
+                            // Формирование массива добавленных строк для вывода на экран
+                            $yandexArray = array();
+                            foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {
+                                $arrayRow = array();
+                                foreach ($yandexSpreadsheetRow as $key => $yandexSpreadsheetCell) {
+                                    if ($key == 0)
+                                        array_push($arrayRow, $yandexSpreadsheetCell->format('d.m.Y'));
+                                    if ($key == 1 || $key == 2 || $key == 5 || $key == 6 || $key == 7)
+                                        array_push($arrayRow, $yandexSpreadsheetCell);
+                                    if ($key == 3 || $key == 4)
+                                        array_push($arrayRow, $yandexSpreadsheetCell->format('H:m'));
+                                }
+                                array_push($arrayRow, $googleSpreadsheetKey);
+                                array_push($yandexArray, $arrayRow);
                             }
-                            array_push($arrayRow, $googleSpreadsheetKey);
-                            array_push($yandexArray, $arrayRow);
-                        }
-                        $dataProvider = new ArrayDataProvider([
-                            'allModels' => $yandexArray,
-                            'pagination' => [
-                                'pageSize' => 10000,
-                            ],
-                        ]);
-                        // Сообщение об успешной синхронизации
-                        Yii::$app->getSession()->setFlash('success', 'Синхронизация прошла успешно!');
+                            $dataProvider = new ArrayDataProvider([
+                                'allModels' => $yandexArray,
+                                'pagination' => [
+                                    'pageSize' => 10000,
+                                ],
+                            ]);
+                            // Сообщение об успешной синхронизации
+                            Yii::$app->getSession()->setFlash('success', 'Синхронизация прошла успешно!');
 
-                        return $this->render('google-synchronization', [
-                            'dataProvider' => $dataProvider,
-                            'res' => $res
-                        ]);
+                            return $this->render('google-synchronization', [
+                                'dataProvider' => $dataProvider
+                            ]);
+                        } else
+                            // Сообщение об ошибке синхронизации
+                            Yii::$app->getSession()->setFlash('error',
+                                'Ошибка синхронизации! При загрузке файла электронной таблицы на Google-диск возникла ошибка.');
                         break;
                 }
             } else

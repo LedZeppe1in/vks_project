@@ -9,6 +9,7 @@ use Google_Service_Drive_DriveFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
+use yii\debug\panels\EventPanel;
 
 /**
  * GoogleSpreadsheet - класс для представления сущностей электронной таблицы из Google Sheet.
@@ -111,7 +112,7 @@ class GoogleSpreadsheet
      * @param $oauthPath - путь к файлам авторизации (учетным данным и токену) для Google Drive API
      * @param $session - текущая сессия пользователя
      * @param $filePath - путь к файлу электронной таблицы на сервере
-     * @return mixed|string
+     * @return bool - успешность загрузки файла
      * @throws \Google_Exception
      */
     function uploadSpreadsheetToGoogleDrive($oauthPath, $session, $filePath)
@@ -160,10 +161,9 @@ class GoogleSpreadsheet
                 $drive->files->create($file, $fileArray);
             }
 
-            return $fileList['files'];
-
+            return true;
         } else
-            return 'Нет подключения!';
+            return false;
     }
 
     /**
@@ -206,12 +206,13 @@ class GoogleSpreadsheet
             $fileList = $drive->files->listFiles();
             // Обход всех файлов и каталогов на Google-диске
             foreach ($fileList['files'] as $file)
-                if ($file['id'] == $fileId)
+                if ($file['id'] == $fileId) {
                     // Получение метаинформации о файле электронной таблицы от Google
-                    $resource = $file;
+                    $resource = (array)$file;
 
-            return $resource;
-
+                    return $resource;
+                }
+            return false;
         } else
             return false;
     }

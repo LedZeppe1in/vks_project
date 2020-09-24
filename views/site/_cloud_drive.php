@@ -19,10 +19,10 @@ use app\models\CloudDriveForm;
         let checkingSuccessMessage = document.getElementById("checking-success-message");
         // Сообщение об ошибке
         let checkingErrorMessage = document.getElementById("checking-error-message");
-        // Слои с подробной информацией google-таблицы
+        // Слои с подробной информацией Google-таблицы
         let googleMetaInformationTitle = document.getElementById("google-meta-information-title");
         let googleMetaInformation = document.getElementById("google-meta-information");
-        // Слои с подробной информацией yandex-таблицы
+        // Слои с подробной информацией Yandex-таблицы
         let yandexMetaInformationTitle = document.getElementById("yandex-meta-information-title");
         let yandexMetaInformation = document.getElementById("yandex-meta-information");
 
@@ -32,7 +32,7 @@ use app\models\CloudDriveForm;
             e.preventDefault();
             // Форма с полями
             let form = $("#cloud-drive-form");
-            // Скрытие слоев с подробной информацией о файлах таблиц
+            // Скрытие слоев с подробной информацией о файлах электронных таблиц
             googleMetaInformationTitle.style.display = "none";
             googleMetaInformation.style.display = "none";
             yandexMetaInformationTitle.style.display = "none";
@@ -51,10 +51,19 @@ use app\models\CloudDriveForm;
                             // Активация слоев с сообщениями
                             checkingSuccessMessage.style.display = "block";
                             checkingErrorMessage.style.display = "none";
-                            // Активация слоев с подробной информацией о файле с yandex-диска
+                            // Активация слоев с подробной информацией о файле с Yandex-диска
                             googleMetaInformationTitle.style.display = "block";
                             googleMetaInformation.style.display = "block";
-                            // Формирование текста подробной информации о файле с yandex-диска
+                            // Формирование текста подробной информации о файле с Google-диска
+                            googleMetaInformation.innerHTML = "<b>ID файла:</b> " +
+                                data["googleResource"]["id"] + "<br/>";
+                            googleMetaInformation.innerHTML += "<b>Имя файла:</b> " +
+                                data["googleResource"]["name"] + "<br/>";
+                            googleMetaInformation.innerHTML += "<b>Тип:</b> " +
+                                data["googleResource"]["kind"] + "<br/>";
+                            googleMetaInformation.innerHTML += "<b>MIME-тип:</b> " +
+                                data["googleResource"]["mimeType"] + "<br/>";
+                            // Формирование текста подробной информации о файле с Yandex-диска
                             yandexMetaInformation.innerHTML = "<b>Ключ опубликованного файла:</b> " +
                                 data["yandexResource"]["public_key"] + "<br/>";
                             yandexMetaInformation.innerHTML += "<b>Ссылка на опубликованный файл:</b> " +
@@ -69,7 +78,7 @@ use app\models\CloudDriveForm;
                                 data["yandexResource"]["created"] + "<br/>";
                             yandexMetaInformation.innerHTML += "<b>Дата и время изменения файла:</b> " +
                                 data["yandexResource"]["modified"];
-                            // Активация слоев с подробной информацией о файле с yandex-диска
+                            // Активация слоев с подробной информацией о файле с Yandex-диска
                             yandexMetaInformationTitle.style.display = "block";
                             yandexMetaInformation.style.display = "block";
                         } else {
@@ -105,7 +114,7 @@ use app\models\CloudDriveForm;
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
-            <strong>Ошибка!</strong> Проверка прошла с ошибкой, возможно Вы неверно указали ссылки на файлы электронных таблиц.
+            <strong>Ошибка!</strong> Проверка прошла с ошибкой, возможно Вы неверно указали ссылку или путь на файлы электронных таблиц.
         </div>
 
         <?php $form = ActiveForm::begin([

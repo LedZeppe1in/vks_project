@@ -2,7 +2,6 @@
 
 /* @var $this yii\web\View */
 /* @var $dataProvider app\controllers\SiteController */
-/* @var $res app\controllers\SiteController */
 
 $this->title = 'Система управления заявками и информирования';
 
@@ -14,12 +13,6 @@ use app\components\YandexSpreadsheet;
 <div class="site-index">
 
     <h1><?= Html::encode($this->title) ?></h1>
-
-    <?php
-        echo '<pre>';
-        print_r($res);
-        echo '<pre>';
-    ?>
 
     <div class="body-content">
         <h3>Обновленные строки в Google-таблице:</h3>
