@@ -2,6 +2,9 @@
 
 namespace app\controllers;
 
+use DateInterval;
+use DatePeriod;
+use DateTime;
 use Google_Service_Drive;
 use Yii;
 use yii\bootstrap\ActiveForm;
@@ -135,6 +138,22 @@ class SiteController extends Controller
         $cloudDriveModel = new CloudDriveForm();
         // Если загружена форма (POST-запрос)
         if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
+            // Массив для дат выборки
+            $dates = array();
+            // Формирование массива дат для выборки строк
+            if ($cloudDriveModel->fromDate != null && $cloudDriveModel->toDate != null)
+                if ($cloudDriveModel->fromDate == $cloudDriveModel->toDate) {
+                    $date = new DateTime($cloudDriveModel->fromDate);
+                    array_push($dates, $date);
+                } else {
+                    $start = new DateTime($cloudDriveModel->fromDate);
+                    $interval = new DateInterval('P1D');
+                    $end = new DateTime($cloudDriveModel->toDate);
+                    $end->setTime(0,0,1);
+                    $period = new DatePeriod($start, $interval, $end);
+                    foreach ($period as $date)
+                        array_push($dates, $date);
+                }
             // Пусть до папки с таблицами
             $path = Yii::$app->basePath . '/web/spreadsheets/';
             // Содание объекта для работы с Google-таблицей
@@ -155,11 +174,12 @@ class SiteController extends Controller
                     // Если нажата кнопка синхронизации с Yandex-диском
                     case 'yandex-synchronization':
                         // Получение всех строк из Yandex-таблицы
-                        $yandexSpreadsheetRows = $yandexSpreadsheet->getAllRows($path);
+                        $yandexSpreadsheetRows = $yandexSpreadsheet->getRows($path, $dates);
                         // Синхронизация с Yandex (поиск недостающих строк)
                         list($googleSpreadsheetRows, $yandexSpreadsheetDeletedRows) = $googleSpreadsheet->syncWithYandex(
                             $yandexSpreadsheetRows,
-                            $path
+                            $path,
+                            $dates
                         );
                         // Если есть новые строки из Google-таблицы
                         if (!empty($googleSpreadsheetRows) || !empty($yandexSpreadsheetDeletedRows)) {
@@ -220,7 +240,7 @@ class SiteController extends Controller
 
                                 return $this->render('yandex-synchronization', [
                                     'deletedRows' => $deletedRows,
-                                    'addedRows' => $addedRows,
+                                    'addedRows' => $addedRows
                                 ]);
                             } else
                                 // Сообщение об ошибке синхронизации
@@ -234,52 +254,62 @@ class SiteController extends Controller
                     // Если нажата кнопка синхронизации с Google-диском
                     case 'google-synchronization':
                         // Получение всех строк из Google-таблицы
-                        $googleSpreadsheetRows = $googleSpreadsheet->getAllRows($path);
+                        $googleSpreadsheetRows = $googleSpreadsheet->getRows($path, $dates);
                         // Синхронизация с Google (поиск строк c табельными номерами)
-                        $yandexSpreadsheetRows = $yandexSpreadsheet->syncWithGoogle($googleSpreadsheetRows, $path);
-                        // Запись нового файла электронной таблицы с обновленными табельными номерами
-                        $googleSpreadsheet->writeSpreadsheet($yandexSpreadsheetRows, $path);
-                        // Пусть до папки с учетными данными Google
-                        $oauthPath = Yii::$app->basePath . '/web/google-oauth/';
-                        // Загрузка нового файла электронной таблицы на Google-диск
-                        $uploadFlag = $googleSpreadsheet->uploadSpreadsheetToGoogleDrive(
-                            $oauthPath,
-                            Yii::$app->session,
-                            $path
+                        $yandexSpreadsheetRows = $yandexSpreadsheet->syncWithGoogle(
+                            $googleSpreadsheetRows,
+                            $path,
+                            $dates
                         );
-                        // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
-                        if ($uploadFlag) {
-                            // Формирование массива добавленных строк для вывода на экран
-                            $yandexArray = array();
-                            foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {
-                                $arrayRow = array();
-                                foreach ($yandexSpreadsheetRow as $key => $yandexSpreadsheetCell) {
-                                    if ($key == 0)
-                                        array_push($arrayRow, $yandexSpreadsheetCell->format('d.m.Y'));
-                                    if ($key == 1 || $key == 2 || $key == 5 || $key == 6 || $key == 7)
-                                        array_push($arrayRow, $yandexSpreadsheetCell);
-                                    if ($key == 3 || $key == 4)
-                                        array_push($arrayRow, $yandexSpreadsheetCell->format('H:m'));
+                        // Если есть обновленные строки с табельными номерами из Yandex-таблицы
+                        if (!empty($yandexSpreadsheetRows)) {
+                            // Запись нового файла электронной таблицы с обновленными табельными номерами
+                            $googleSpreadsheet->writeSpreadsheet($yandexSpreadsheetRows, $path);
+                            // Пусть до папки с учетными данными Google
+                            $oauthPath = Yii::$app->basePath . '/web/google-oauth/';
+                            // Загрузка нового файла электронной таблицы на Google-диск
+                            $uploadFlag = $googleSpreadsheet->uploadSpreadsheetToGoogleDrive(
+                                $oauthPath,
+                                Yii::$app->session,
+                                $path
+                            );
+                            // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
+                            if ($uploadFlag) {
+                                // Формирование массива добавленных строк для вывода на экран
+                                $yandexArray = array();
+                                foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {
+                                    $arrayRow = array();
+                                    foreach ($yandexSpreadsheetRow as $key => $yandexSpreadsheetCell) {
+                                        if ($key == 0)
+                                            array_push($arrayRow, $yandexSpreadsheetCell->format('d.m.Y'));
+                                        if ($key == 1 || $key == 2 || $key == 5 || $key == 6 || $key == 7)
+                                            array_push($arrayRow, $yandexSpreadsheetCell);
+                                        if ($key == 3 || $key == 4)
+                                            array_push($arrayRow, $yandexSpreadsheetCell->format('H:m'));
+                                    }
+                                    array_push($arrayRow, $googleSpreadsheetKey);
+                                    array_push($yandexArray, $arrayRow);
                                 }
-                                array_push($arrayRow, $googleSpreadsheetKey);
-                                array_push($yandexArray, $arrayRow);
-                            }
-                            $dataProvider = new ArrayDataProvider([
-                                'allModels' => $yandexArray,
-                                'pagination' => [
-                                    'pageSize' => 10000,
-                                ],
-                            ]);
-                            // Сообщение об успешной синхронизации
-                            Yii::$app->getSession()->setFlash('success', 'Синхронизация прошла успешно!');
+                                $dataProvider = new ArrayDataProvider([
+                                    'allModels' => $yandexArray,
+                                    'pagination' => [
+                                        'pageSize' => 10000,
+                                    ],
+                                ]);
+                                // Сообщение об успешной синхронизации
+                                Yii::$app->getSession()->setFlash('success', 'Синхронизация прошла успешно!');
 
-                            return $this->render('google-synchronization', [
-                                'dataProvider' => $dataProvider
-                            ]);
+                                return $this->render('google-synchronization', [
+                                    'dataProvider' => $dataProvider
+                                ]);
+                            } else
+                                // Сообщение об ошибке синхронизации
+                                Yii::$app->getSession()->setFlash('error',
+                                    'Ошибка синхронизации! При загрузке файла электронной таблицы на Google-диск возникла ошибка.');
                         } else
-                            // Сообщение об ошибке синхронизации
-                            Yii::$app->getSession()->setFlash('error',
-                                'Ошибка синхронизации! При загрузке файла электронной таблицы на Google-диск возникла ошибка.');
+                            // Сообщение о том, что синхронизация не требуется
+                            Yii::$app->getSession()->setFlash('warning',
+                                'Синхронизация не требуется! Все данные актуальны.');
                         break;
                 }
             } else

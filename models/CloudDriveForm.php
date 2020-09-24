@@ -20,6 +20,8 @@ class CloudDriveForm extends Model
 
     public $googleFileLink; // Ссылка на файл Google-таблицы
     public $yandexFilePath; // Путь к файлу Yandex-таблицы
+    public $fromDate;       // Дата начала для выборки
+    public $toDate;         // Дата окончания для выборки
 
     /**
      * @return array the validation rules.
@@ -29,6 +31,7 @@ class CloudDriveForm extends Model
         return [
             [['googleFileLink', 'yandexFilePath'], 'required'],
             [['googleFileLink', 'yandexFilePath'], 'string'],
+            [['fromDate', 'toDate'], 'date', 'format' => 'php:d.m.Y'],
         ];
     }
 
@@ -40,6 +43,8 @@ class CloudDriveForm extends Model
         return [
             'googleFileLink' => 'Ссылка на файл электронной таблицы на Google Sheets',
             'yandexFilePath' => 'Путь к файлу электронной таблице на Yandex-диске',
+            'fromDate' => 'Дата начала',
+            'toDate' => 'Дата окончания',
         ];
     }
 }

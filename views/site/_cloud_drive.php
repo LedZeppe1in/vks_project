@@ -2,9 +2,11 @@
 
 /* @var $cloudDriveModel app\models\CloudDriveForm */
 
+use kartik\date\DatePicker;
+use kartik\form\ActiveForm;
 use yii\helpers\Html;
 use yii\bootstrap\Button;
-use yii\bootstrap\ActiveForm;
+
 use app\models\CloudDriveForm;
 ?>
 
@@ -129,6 +131,32 @@ use app\models\CloudDriveForm;
 
         <?= $form->field($cloudDriveModel, 'yandexFilePath')
             ->textInput(['value' => CloudDriveForm::YANDEX_FILE_PATH]) ?>
+
+        <div style="width: 300px; margin-bottom: 10px;">
+            <label class="control-label has-star">Даты выборки</label>
+            <?= DatePicker::widget([
+                'model' => $cloudDriveModel,
+                'form' => $form,
+                'type' => DatePicker::TYPE_RANGE,
+                'language' => 'ru',
+                'attribute' => 'fromDate',
+                'attribute2' => 'toDate',
+                'options' => [
+                    'placeholder' => 'Дата начала',
+                ],
+                'options2' => [
+                    'placeholder' => 'Дата окончания'
+                ],
+                'separator' => ' до ',
+                'pluginOptions' => [
+                    'format' => 'dd.mm.yyyy',
+                    'autoclose' => true
+                ]
+            ]); ?>
+        </div>
+        <span class="badge" style="margin-bottom: 10px;">
+            Если Вы хотите использовать даты для выборки определенных строк, то введите обе даты.
+        </span>
 
         <div class="form-group">
             <?= Button::widget([

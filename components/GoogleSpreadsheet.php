@@ -242,15 +242,16 @@ class GoogleSpreadsheet
     }
 
     /**
-     * Получение всех строк электронной таблицы.
+     * Получение строк электронной таблицы на соответствующие даты.
      *
      * @param $path - путь к файлу электронной таблицы на сервере
+     * @param $dates - массив дат для выборки строк
      * @return array - массив считанных строк таблицы
      * @throws \Box\Spout\Common\Exception\IOException
      * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
      * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
      */
-    public function getAllRows($path)
+    public function getRows($path, $dates)
     {
         $spreadsheetRows = array();
         $reader = ReaderEntityFactory::createReaderFromFile($path . $this->fileName);
@@ -266,8 +267,10 @@ class GoogleSpreadsheet
                             if ($cellNumber == 1 || $cellNumber == 3 || $cellNumber == 5 ||
                                 $cellNumber == 7 || $cellNumber == 8 || $cellNumber == 10)
                                 array_push($spreadsheetRow, $cell->getValue());
-                        // Добавление текущей строки в массив
-                        $spreadsheetRows[$rowNumber] = $spreadsheetRow;
+                        // Если массив дат пуст или если текущая дата в строке входит в диапозон дат выборки
+                        if (empty($dates) || in_array($spreadsheetRow[0], $dates))
+                            // Добавление текущей строки в массив
+                            $spreadsheetRows[$rowNumber] = $spreadsheetRow;
                     }
         $reader->close();
 
@@ -279,15 +282,16 @@ class GoogleSpreadsheet
      *
      * @param $yandexSpreadsheetRows - массив всех строк электронной таблицы Yandex
      * @param $path - путь к файлу электронной таблицы на сервере
+     * @param $dates - массив дат для выборки строк
      * @return array - массив из: массива строк, которых нет в электронной таблице Yandex,
      *                            массива с номерами строк из Yandex-таблицы, которые необходимо удалить
      * @throws \Box\Spout\Common\Exception\IOException
      * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
      * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
      */
-    public function syncWithYandex($yandexSpreadsheetRows, $path)
+    public function syncWithYandex($yandexSpreadsheetRows, $path, $dates)
     {
-        // Массив для всех строк из Google-таблицы
+        // Массив для всех строк из Google-таблицы, соответствующих определенным датам
         $allGoogleSpreadsheetRows = array();
         // Массив для строк, которых нет в Yandex-таблице
         $googleSpreadsheetRows = array();
@@ -306,20 +310,23 @@ class GoogleSpreadsheet
                             if ($cellNumber == 1 || $cellNumber == 3 || $cellNumber == 5 ||
                                 $cellNumber == 7 || $cellNumber == 8 || $cellNumber == 9)
                                 array_push($googleSpreadsheetRow, $cell->getValue());
-                        // Проверка совпадания строки из Yandex-таблицы
-                        $equality = false;
-                        foreach ($yandexSpreadsheetRows as $yandexSpreadsheetRow)
-                            if ($yandexSpreadsheetRow[0] == $googleSpreadsheetRow[0] &&
-                                $yandexSpreadsheetRow[1] == $googleSpreadsheetRow[1] &&
-                                $yandexSpreadsheetRow[2] == $googleSpreadsheetRow[2] &&
-                                $yandexSpreadsheetRow[3] == $googleSpreadsheetRow[3] &&
-                                $yandexSpreadsheetRow[4] == $googleSpreadsheetRow[4])
-                                $equality = true;
-                        // Если совпадения нет, то добавление текущей строки в массив
-                        if ($equality == false)
-                            array_push($googleSpreadsheetRows, $googleSpreadsheetRow);
-                        // Формирование массива со всеми строками из Google-таблицы
-                        array_push($allGoogleSpreadsheetRows, $googleSpreadsheetRow);
+                        // Если массив дат пуст или если текущая дата в строке входит в диапозон дат выборки
+                        if (empty($dates) || in_array($googleSpreadsheetRow[0], $dates)) {
+                            // Проверка совпадания строки из Yandex-таблицы
+                            $equality = false;
+                            foreach ($yandexSpreadsheetRows as $yandexSpreadsheetRow)
+                                if ($yandexSpreadsheetRow[0] == $googleSpreadsheetRow[0] &&
+                                    $yandexSpreadsheetRow[1] == $googleSpreadsheetRow[1] &&
+                                    $yandexSpreadsheetRow[2] == $googleSpreadsheetRow[2] &&
+                                    $yandexSpreadsheetRow[3] == $googleSpreadsheetRow[3] &&
+                                    $yandexSpreadsheetRow[4] == $googleSpreadsheetRow[4])
+                                    $equality = true;
+                            // Если совпадения нет, то добавление текущей строки в массив
+                            if ($equality == false)
+                                array_push($googleSpreadsheetRows, $googleSpreadsheetRow);
+                            // Формирование массива со всеми строками из Google-таблицы, соответствующих определенным датам
+                            array_push($allGoogleSpreadsheetRows, $googleSpreadsheetRow);
+                        }
                     }
         $reader->close();
         // Формирование массива с номерами строк из Yandex-таблицы, которые необходимо удалить
