@@ -30,6 +30,7 @@ $config = [
                 '/' => 'site/index',
                 'contact' => 'site/contact',
                 'checking' => 'site/checking',
+                'get-mailing-list' => 'site/get-mailing-list',
             ],
         ],
         'cache' => [

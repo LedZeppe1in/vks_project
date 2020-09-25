@@ -2,6 +2,9 @@
 
 namespace app\models;
 
+use DateTime;
+use DatePeriod;
+use DateInterval;
 use yii\base\Model;
 
 class CloudDriveForm extends Model
@@ -46,5 +49,31 @@ class CloudDriveForm extends Model
             'fromDate' => 'Дата начала',
             'toDate' => 'Дата окончания',
         ];
+    }
+
+    /**
+     * Формирование массива диапазона дат для выборки строк электронных таблиц.
+     *
+     * @return array - массив дат для выборки строк
+     * @throws \Exception
+     */
+    public function getDates()
+    {
+        $dates = array();
+        if ($this->fromDate != null && $this->toDate != null)
+            if ($this->fromDate == $this->toDate) {
+                $date = new DateTime($this->fromDate);
+                array_push($dates, $date);
+            } else {
+                $start = new DateTime($this->fromDate);
+                $interval = new DateInterval('P1D');
+                $end = new DateTime($this->toDate);
+                $end->setTime(0,0,1);
+                $period = new DatePeriod($start, $interval, $end);
+                foreach ($period as $date)
+                    array_push($dates, $date);
+            }
+
+        return $dates;
     }
 }

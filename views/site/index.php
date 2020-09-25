@@ -2,6 +2,8 @@
 
 /* @var $this yii\web\View */
 /* @var $cloudDriveModel app\models\CloudDriveForm */
+/* @var $notificationModel app\models\NotificationForm */
+/* @var $employees app\models\NotificationForm */
 
 $this->title = 'Система управления заявками и информирования';
 
@@ -24,7 +26,18 @@ use yii\bootstrap\Tabs;
                 ],
                 [
                     'label' => 'Информирование',
-                    'content' => $this->render('_information'),
+                    'content' => $this->render('_notification', [
+                        'notificationModel' => $notificationModel,
+                        'employees' => $employees,
+                    ]),
+                    'headerOptions' => [
+                        'id' => 'information-tab',
+                        'class' => 'disabled'
+                    ],
+                    'linkOptions' => [
+                        'id' => 'information-tab-link',
+                        'data-toggle' => ''
+                    ]
                 ]
             ]
         ]); ?>

@@ -2,20 +2,17 @@
 
 namespace app\controllers;
 
-use DateInterval;
-use DatePeriod;
-use DateTime;
-use Google_Service_Drive;
 use Yii;
-use yii\bootstrap\ActiveForm;
-use yii\data\ArrayDataProvider;
 use yii\web\Response;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
+use yii\bootstrap\ActiveForm;
+use yii\data\ArrayDataProvider;
 use app\models\LoginForm;
 use app\models\ContactForm;
 use app\models\CloudDriveForm;
+use app\models\NotificationForm;
 use app\components\GoogleSpreadsheet;
 use app\components\YandexSpreadsheet;
 
@@ -134,32 +131,27 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
+        // Пусть до папки с таблицами
+        $path = Yii::$app->basePath . '/web/spreadsheets/';
         // Формирование модели (формы) CloudDriveForm
         $cloudDriveModel = new CloudDriveForm();
+        // Формирование модели (формы) NotificationForm
+        $notificationModel = new NotificationForm();
+        // Формирование DataProvider для отображения списка сотрудников
+        $employees = new ArrayDataProvider([
+            'allModels' => array(),
+            'pagination' => [
+                'pageSize' => 10000,
+            ],
+        ]);
+        // Содание объекта для работы с Google-таблицей
+        $googleSpreadsheet = new GoogleSpreadsheet();
+        // Содание объекта для работы с Yandex-таблицей
+        $yandexSpreadsheet = new YandexSpreadsheet();
         // Если загружена форма (POST-запрос)
         if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
-            // Массив для дат выборки
-            $dates = array();
             // Формирование массива дат для выборки строк
-            if ($cloudDriveModel->fromDate != null && $cloudDriveModel->toDate != null)
-                if ($cloudDriveModel->fromDate == $cloudDriveModel->toDate) {
-                    $date = new DateTime($cloudDriveModel->fromDate);
-                    array_push($dates, $date);
-                } else {
-                    $start = new DateTime($cloudDriveModel->fromDate);
-                    $interval = new DateInterval('P1D');
-                    $end = new DateTime($cloudDriveModel->toDate);
-                    $end->setTime(0,0,1);
-                    $period = new DatePeriod($start, $interval, $end);
-                    foreach ($period as $date)
-                        array_push($dates, $date);
-                }
-            // Пусть до папки с таблицами
-            $path = Yii::$app->basePath . '/web/spreadsheets/';
-            // Содание объекта для работы с Google-таблицей
-            $googleSpreadsheet = new GoogleSpreadsheet();
-            // Содание объекта для работы с Yandex-таблицей
-            $yandexSpreadsheet = new YandexSpreadsheet();
+            $dates = $cloudDriveModel->getDates();
             // Копирование Google-таблицы на сервер
             $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer($cloudDriveModel->googleFileLink, $path);
             // Копирование Yandex-таблицы на сервер
@@ -318,9 +310,103 @@ class SiteController extends Controller
                     'Ошибка синхронизации! При копировании файла электронной таблицы на сервер возникли ошибки.');
         }
 
+        // Pjax-запрос
+        if (Yii::$app->request->isAjax) {
+            // Формирование полей модели (формы)
+            $cloudDriveModel->googleFileLink = Yii::$app->request->post('google-file-link');
+            $cloudDriveModel->fromDate = Yii::$app->request->post('from-date');
+            $cloudDriveModel->toDate = Yii::$app->request->post('to-date');
+            // Копирование Google-таблицы на сервер
+            $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer(
+                $cloudDriveModel->googleFileLink,
+                $path
+            );
+            // Если нет ошибки при копировании электронной таблицы Google на сервер
+            if ($copyGoogleSuccess) {
+                // Формирование массива дат для выборки строк
+                $dates = $cloudDriveModel->getDates();
+                // Получение списка сотрудников для оповещения
+                $googleSpreadsheetRows = $googleSpreadsheet->getEmployeesList($path, $dates);
+                // Формирование массива для GridView
+                $googleArray = array();
+                foreach ($googleSpreadsheetRows as $googleSpreadsheetRow) {
+                    $arrayRow = array();
+                    foreach ($googleSpreadsheetRow as $key => $googleSpreadsheetCell) {
+                        if ($key == 0 || $key == 1 || $key == 2 || $key == 6 || $key == 7)
+                            array_push($arrayRow, $googleSpreadsheetCell);
+                        if ($key == 3)
+                            array_push($arrayRow, $googleSpreadsheetCell->format('d.m.Y'));
+                        if ($key == 4 || $key == 5)
+                            array_push($arrayRow, $googleSpreadsheetCell->format('H:m'));
+                    }
+                    array_push($googleArray, $arrayRow);
+                }
+                $employees = new ArrayDataProvider([
+                    'allModels' => $googleArray,
+                    'pagination' => [
+                        'pageSize' => 10000,
+                    ],
+                ]);
+            }
+        }
+
         return $this->render('index', [
             'cloudDriveModel' => $cloudDriveModel,
+            'notificationModel' => $notificationModel,
+            'employees' => $employees,
         ]);
+    }
+
+    /**
+     * Формирование списка рассылки.
+     *
+     * @return bool|\yii\console\Response|Response
+     * @throws \Exception
+     */
+    public function actionGetMailingList()
+    {
+        // Ajax-запрос
+        if (Yii::$app->request->isAjax) {
+            // Определение массива возвращаемых данных
+            $data = array();
+            // Установка формата JSON для возвращаемых данных
+            $response = Yii::$app->response;
+            $response->format = Response::FORMAT_JSON;
+            // Формирование модели (формы) CloudDriveForm
+            $cloudDriveModel = new CloudDriveForm();
+            // Определение полей модели шаблона факта и валидация формы
+            if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
+                // Успешный ввод данных
+                $data["success"] = true;
+                // Пусть до папки с таблицами
+                $path = Yii::$app->basePath . '/web/spreadsheets/';
+                // Содание объекта для работы с Google-таблицей
+                $googleSpreadsheet = new GoogleSpreadsheet();
+                // Копирование Google-таблицы на сервер
+                $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer(
+                    $cloudDriveModel->googleFileLink,
+                    $path
+                );
+                // Если нет ошибки при копировании электронной таблицы Google на сервер
+                if ($copyGoogleSuccess) {
+                    // Ошибки при копировании файла электронной таблицы нет
+                    $data["copy_error"] = false;
+                    // Формирование массива дат для выборки строк
+                    $dates = $cloudDriveModel->getDates();
+                    // Получение списка сотрудников для оповещения
+                    $data["employees"] = $googleSpreadsheet->getEmployeesList($path, $dates);
+                } else
+                    // Наличие ошибки при копировании файла электронной таблицы
+                    $data["copy_error"] = true;
+            } else
+                $data = ActiveForm::validate($cloudDriveModel);
+            // Возвращение данных
+            $response->data = $data;
+
+            return $response;
+        }
+
+        return false;
     }
 
     /**

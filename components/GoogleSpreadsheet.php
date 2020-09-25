@@ -368,4 +368,80 @@ class GoogleSpreadsheet
         $writer = new Xlsx($spreadsheet);
         $writer->save($path . $this->newFileName);
     }
+
+    /**
+     * Получение списка сотрудников для оповещения.
+     *
+     * @param $path - путь к файлу электронной таблицы на сервере
+     * @param $dates - массив дат для выборки строк
+     * @return array - массив с информацией о сотрудниках для оповещения
+     * @throws \Box\Spout\Common\Exception\IOException
+     * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
+     * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
+     */
+    public function getEmployeesList($path, $dates)
+    {
+        // Массив c информацией о сотрудниках для оповещения
+        $employees = array();
+        // Массив для строк c подтвержденными заявками из Google-таблицы
+        $googleSpreadsheetRows = array();
+        // Чтение Google-таблицы
+        $reader = ReaderEntityFactory::createReaderFromFile($path . $this->fileName);
+        $reader->open($path . $this->fileName);
+        // Обход строк на вкладке "Заявка"
+        foreach ($reader->getSheetIterator() as $sheet)
+            if ($sheet->getName() === self::REQUESTS_SHEET)
+                foreach ($sheet->getRowIterator() as $rowNumber => $row)
+                    if ($rowNumber > 1) {
+                        // Запоминание текущей строки из Google-таблицы
+                        $googleSpreadsheetRow = array();
+                        foreach ($row->getCells() as $cellNumber => $cell)
+                            if ($cellNumber == 1 || $cellNumber == 3 || $cellNumber == 5 ||
+                                $cellNumber == 7 || $cellNumber == 8 || $cellNumber == 10)
+                                array_push($googleSpreadsheetRow, $cell->getValue());
+                        // Если массив дат пуст или если текущая дата в строке входит в диапозон дат выборки
+                        if (empty($dates) || in_array($googleSpreadsheetRow[0], $dates))
+                            // Если есть тебельный номер
+                            if ($googleSpreadsheetRow[5] != '')
+                                // Добавление строки c подтвержденной заявкой в массив
+                                array_push($googleSpreadsheetRows, $googleSpreadsheetRow);
+                    }
+        // Обход строк на вкладке "Сотрудники"
+        foreach ($reader->getSheetIterator() as $sheet)
+            if ($sheet->getName() === self::EMPLOYEES_SHEET)
+                foreach ($sheet->getRowIterator() as $rowNumber => $row)
+                    if ($rowNumber > 1) {
+                        // Запоминание текущей строки с информацией о сотруднике из Google-таблицы
+                        $employee = array();
+                        $fullName = '';
+                        foreach ($row->getCells() as $cellNumber => $cell) {
+                            if ($cellNumber == 0)
+                                $fullName = $cell->getValue();
+                            if ($cellNumber == 1)
+                                $fullName .= ' ' . $cell->getValue();
+                            if ($cellNumber == 2) {
+                                $fullName .= ' ' . $cell->getValue();
+                                array_push($employee, $fullName);
+                            }
+                            if ($cellNumber == 3 || $cellNumber == 5)
+                                array_push($employee, $cell->getValue());
+                        }
+                        // Цикл по всем найденным строкам подтвержденных заявок
+                        foreach ($googleSpreadsheetRows as $googleSpreadsheetRow)
+                            // Если табельные номера совпадают
+                            if ($googleSpreadsheetRow[5] == $employee[1]) {
+                                // Добавление в массив сотрудника недостающей информации
+                                array_push($employee, $googleSpreadsheetRow[0]);
+                                array_push($employee, $googleSpreadsheetRow[3]);
+                                array_push($employee, $googleSpreadsheetRow[4]);
+                                array_push($employee, $googleSpreadsheetRow[1]);
+                                array_push($employee, $googleSpreadsheetRow[2]);
+                                // Добавление текущей строки с информацией о сотруднике в массив
+                                array_push($employees, $employee);
+                            }
+                    }
+        $reader->close();
+
+        return $employees;
+    }
 }
