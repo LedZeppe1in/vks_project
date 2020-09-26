@@ -55,6 +55,8 @@ use app\models\CloudDriveForm;
                 success: function(data) {
                     // Если валидация прошла успешно (нет ошибок ввода)
                     if (data["success"]) {
+                        // Скрытие списка ошибок ввода
+                        $("#cloud-drive-form .error-summary").hide();
                         // Если ошибки при проверке таблиц нет
                         if (!data["checking_error"]) {
                             // Активация слоя с сообщением об успешной проверке таблиц
@@ -103,9 +105,16 @@ use app\models\CloudDriveForm;
                             employeesWarningMessage.style.display = "none";
                             employeesSuccessMessage.style.display = "none";
                         }
-                    } else
+                    } else {
+                        // Деактивация всех слоев с сообщениями
+                        copyErrorMessage.style.display = "none";
+                        employeesWarningMessage.style.display = "none";
+                        employeesSuccessMessage.style.display = "none";
+                        checkingErrorMessage.style.display = "none";
+                        checkingSuccessMessage.style.display = "none";
                         // Отображение ошибок ввода
                         viewErrors("#cloud-drive-form", data);
+                    }
                 },
                 error: function() {
                     alert("Непредвиденная ошибка!");
@@ -128,6 +137,8 @@ use app\models\CloudDriveForm;
                 success: function(data) {
                     // Если валидация прошла успешно (нет ошибок ввода)
                     if (data["success"]) {
+                        // Скрытие списка ошибок ввода
+                        $("#cloud-drive-form .error-summary").hide();
                         // Если ошибки при копировании электронной таблицы Google нет
                         if (!data["copy_error"]) {
                             // Если список сотрудников для оповещения не сформирован
@@ -165,9 +176,16 @@ use app\models\CloudDriveForm;
                             $("#information-tab").addClass("disabled");
                             informationTabLink.dataset.toggle = "";
                         }
-                    } else
+                    } else {
+                        // Деактивация всех слоев с сообщениями
+                        copyErrorMessage.style.display = "none";
+                        employeesWarningMessage.style.display = "none";
+                        employeesSuccessMessage.style.display = "none";
+                        checkingErrorMessage.style.display = "none";
+                        checkingSuccessMessage.style.display = "none";
                         // Отображение ошибок ввода
                         viewErrors("#cloud-drive-form", data);
+                    }
                 },
                 error: function() {
                     alert("Непредвиденная ошибка!");
@@ -175,7 +193,7 @@ use app\models\CloudDriveForm;
             });
         });
 
-        //
+        // Обработка после выполнения pjax
         $(document).on('ready pjax:success', function() {
             // Активация слоя с сообщением об успешном формировании списка сотрудников для оповещения
             employeesSuccessMessage.style.display = "block";
@@ -271,14 +289,14 @@ use app\models\CloudDriveForm;
             </span>
 
             <div class="form-group">
-                <?= Button::widget([
-                    'label' => '<span class="glyphicon glyphicon-check"></span> Проверить',
-                    'encodeLabel' => false,
-                    'options' => [
-                        'id' => 'checking-button',
-                        'class' => 'btn btn-primary'
-                    ]
-                ]); ?>
+                    <?= Button::widget([
+                        'label' => '<span class="glyphicon glyphicon-check"></span> Проверить',
+                        'encodeLabel' => false,
+                        'options' => [
+                            'id' => 'checking-button',
+                            'class' => 'btn btn-primary'
+                        ]
+                    ]); ?>
                 <?= Html::submitButton('<span class="glyphicon glyphicon-refresh"></span> Синхронизировать с Яндекс-диском',
                     ['class' => 'btn btn-success', 'name' => 'synchronization-button', 'value' => 'yandex-synchronization']); ?>
                 <?= Html::submitButton('<span class="glyphicon glyphicon-refresh"></span> Синхронизировать с  Google-диском',

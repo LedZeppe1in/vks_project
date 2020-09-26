@@ -137,6 +137,10 @@ class SiteController extends Controller
         $cloudDriveModel = new CloudDriveForm();
         // Формирование модели (формы) NotificationForm
         $notificationModel = new NotificationForm();
+        // Если существует файл с текстом шаблона сообщения, то определяем значение поля текста с этого файла
+        if (file_exists(Yii::$app->basePath . '/web/' . NotificationForm::MESSAGE_TEMPLATE_FILE_NAME))
+            $notificationModel->messageTemplate = file_get_contents(Yii::$app->basePath . '/web/' .
+                NotificationForm::MESSAGE_TEMPLATE_FILE_NAME);
         // Формирование DataProvider для отображения списка сотрудников
         $employees = new ArrayDataProvider([
             'allModels' => array(),
@@ -400,6 +404,46 @@ class SiteController extends Controller
                     $data["copy_error"] = true;
             } else
                 $data = ActiveForm::validate($cloudDriveModel);
+            // Возвращение данных
+            $response->data = $data;
+
+            return $response;
+        }
+
+        return false;
+    }
+
+    /**
+     * Сохранение шаблона текста сообщения для оповещения сотрудников.
+     *
+     * @return bool|\yii\console\Response|Response
+     * @throws \Exception
+     */
+    public function actionSaveMessageTemplate()
+    {
+        // Ajax-запрос
+        if (Yii::$app->request->isAjax) {
+            // Определение массива возвращаемых данных
+            $data = array();
+            // Установка формата JSON для возвращаемых данных
+            $response = Yii::$app->response;
+            $response->format = Response::FORMAT_JSON;
+            // Формирование модели (формы) NotificationForm
+            $notificationModel = new NotificationForm();
+            // Определение полей модели (формы) оповещения и валидация формы
+            if ($notificationModel->load(Yii::$app->request->post()) && $notificationModel->validate()) {
+                // Успешный ввод данных
+                $data["success"] = true;
+                // Пусть до папки с текстовым файлом шаблона сообщения
+                $path = Yii::$app->basePath . '/web/';
+                // Открытие файла на запись для сохранения шаблона сообщения
+                $file = fopen($path . NotificationForm::MESSAGE_TEMPLATE_FILE_NAME, 'w');
+                // Запись в файл текста шаблона сообщения
+                fwrite($file, $notificationModel->messageTemplate);
+                // Закрытие файла
+                fclose($file);
+            } else
+                $data = ActiveForm::validate($notificationModel);
             // Возвращение данных
             $response->data = $data;
 

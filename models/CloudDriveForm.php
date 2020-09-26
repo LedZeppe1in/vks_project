@@ -7,6 +7,11 @@ use DatePeriod;
 use DateInterval;
 use yii\base\Model;
 
+/**
+ * Class CloudDriveForm - класс для определения формы взаимодействия с облачными дисками Google и Yandex.
+ *
+ * @package app\models
+ */
 class CloudDriveForm extends Model
 {
     // Ссылка на файл электронной таблицы на Google Sheets

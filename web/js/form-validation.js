@@ -20,7 +20,6 @@ function viewErrors(form, errors) {
         var li = document.createElement('li');
         li.innerHTML = value;
         ul.append(li);
-        console.log(key + value);
         // Добавление слоя ошибки ввода к полю
         var field = $(form + " #" + key);
         field.after("<div class=\"help-block\">" + value + "</div>");

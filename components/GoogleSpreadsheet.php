@@ -9,7 +9,6 @@ use Google_Service_Drive_DriveFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
-use yii\debug\panels\EventPanel;
 
 /**
  * GoogleSpreadsheet - класс для представления сущностей электронной таблицы из Google Sheet.
