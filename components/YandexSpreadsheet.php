@@ -194,8 +194,8 @@ class YandexSpreadsheet
             // Добавление новых строк в Yandex-таблицу
             foreach ($googleSpreadsheetRows as $googleSpreadsheetRow) {
                 // Добавление новой строки в конец электронной таблицы
-                $row = $worksheet->getHighestRow();
-                $worksheet->insertNewRowBefore($row + 1);
+                $row = $worksheet->getHighestRow() + 1;
+                $worksheet->insertNewRowBefore($row);
                 // Определение стиля даты для ячеек с датой
                 $worksheet->getStyle('A' . $row)
                     ->getNumberFormat()

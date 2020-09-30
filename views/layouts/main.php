@@ -23,8 +23,13 @@ AppAsset::register($this);
     <title><?= Html::encode($this->title) ?></title>
     <?php $this->head() ?>
 </head>
+
 <body>
 <?php $this->beginBody() ?>
+
+<!-- Подключение js-скриптов для индикатора прогресса -->
+<?php $this->registerJsFile('/js/spin.min.js', ['position' => yii\web\View::POS_HEAD]) ?>
+<?php $this->registerJsFile('/js/spinner-options.js', ['position' => yii\web\View::POS_HEAD]) ?>
 
 <div class="wrap">
     <?php
@@ -70,6 +75,10 @@ AppAsset::register($this);
 </footer>
 
 <?php $this->endBody() ?>
+
+<div id ="overlay"></div><!-- div for js spinner -->
+<div id ="center"></div><!-- div for js spinner -->
+
 </body>
 </html>
 <?php $this->endPage() ?>

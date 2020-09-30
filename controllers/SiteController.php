@@ -201,7 +201,7 @@ class SiteController extends Controller
                                                 if ($key == 1 || $key == 2)
                                                     array_push($arrayRow, $yandexSpreadsheetCell);
                                                 if ($key == 3 || $key == 4)
-                                                    array_push($arrayRow, $yandexSpreadsheetCell->format('H:m'));
+                                                    array_push($arrayRow, $yandexSpreadsheetCell->format('H:i'));
                                             }
                                             array_push($yandexArray, $arrayRow);
                                         }
@@ -221,7 +221,7 @@ class SiteController extends Controller
                                         if ($key == 1 || $key == 2 || $key == 5)
                                             array_push($arrayRow, $googleSpreadsheetCell);
                                         if ($key == 3 || $key == 4)
-                                            array_push($arrayRow, $googleSpreadsheetCell->format('H:m'));
+                                            array_push($arrayRow, $googleSpreadsheetCell->format('H:i'));
                                     }
                                     array_push($googleArray, $arrayRow);
                                 }
@@ -281,7 +281,7 @@ class SiteController extends Controller
                                         if ($key == 1 || $key == 2 || $key == 5 || $key == 6 || $key == 7)
                                             array_push($arrayRow, $yandexSpreadsheetCell);
                                         if ($key == 3 || $key == 4)
-                                            array_push($arrayRow, $yandexSpreadsheetCell->format('H:m'));
+                                            array_push($arrayRow, $yandexSpreadsheetCell->format('H:i'));
                                     }
                                     array_push($arrayRow, $googleSpreadsheetKey);
                                     array_push($yandexArray, $arrayRow);
@@ -341,7 +341,7 @@ class SiteController extends Controller
                         if ($key == 3)
                             array_push($arrayRow, $googleSpreadsheetCell->format('d.m.Y'));
                         if ($key == 4 || $key == 5)
-                            array_push($arrayRow, $googleSpreadsheetCell->format('H:m'));
+                            array_push($arrayRow, $googleSpreadsheetCell->format('H:i'));
                     }
                     array_push($googleArray, $arrayRow);
                 }

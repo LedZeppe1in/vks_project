@@ -11,47 +11,6 @@ use yii\bootstrap\ActiveForm;
 use app\components\GoogleSpreadsheet;
 ?>
 
-<!-- JS-скрипт -->
-<script type="text/javascript">
-    // Выполнение скрипта при загрузке страницы
-    $(document).ready(function() {
-        // Сообщение об успешном сохранении файла с текстом шаблона сообщения
-        let saveFileSuccessMessage = document.getElementById("save-file-success-message");
-
-        // Обработка нажатия кнопки сохранения шаблона сообщения
-        $("#save-message-template-button").click(function(e) {
-            // Отмена поведения кнопки по умолчанию (submit)
-            e.preventDefault();
-            // Форма с полем шаблона текста сообщения
-            let form = $("#notification-form");
-            // Ajax-запрос
-            $.ajax({
-                url: "<?= Yii::$app->request->baseUrl . '/save-message-template' ?>",
-                type: "post",
-                data: form.serialize(),
-                dataType: "json",
-                success: function(data) {
-                    // Если валидация прошла успешно (нет ошибок ввода)
-                    if (data["success"]) {
-                        // Скрытие списка ошибок ввода
-                        $("#notification-form .error-summary").hide();
-                        // Активация слоя с сообщением об успешном сохранении файла с текстом шаблона сообщения
-                        saveFileSuccessMessage.style.display = "block";
-                    } else {
-                        // Деактивация всех слоев с сообщениями
-                        saveFileSuccessMessage.style.display = "none";
-                        // Отображение ошибок ввода
-                        viewErrors("#notification-form", data);
-                    }
-                },
-                error: function() {
-                    alert("Непредвиденная ошибка!");
-                }
-            });
-        });
-    });
-</script>
-
 <div class="row">
     <div class="col-md-12">
 
