@@ -400,6 +400,18 @@ class SiteController extends Controller
                     $dates = $cloudDriveModel->getDates();
                     // Получение списка сотрудников для оповещения
                     $data['employees'] = $googleSpreadsheet->getEmployeesList($path, $dates);
+                    // Формирование параметров для POST-запроса к СМС-Органайзеру
+                    $parameters = array('login' => NotificationForm::LOGIN, 'passwd' => NotificationForm::PASSWORD);
+                    // Отправка POST-запроса СМС-Органайзеру для проверки баланса
+                    $handle = curl_init();
+                    curl_setopt($handle, CURLOPT_URL,NotificationForm::CHECK_BALANCE_LINK);
+                    curl_setopt($handle, CURLOPT_POST, 1);
+                    curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
+                    curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+                    $serverOutput = curl_exec($handle);
+                    curl_close ($handle);
+                    // Формирование текущего баланса
+                    $data['balance'] = $serverOutput;
                 } else
                     // Наличие ошибки при копировании файла электронной таблицы
                     $data['copyError'] = true;
@@ -480,6 +492,18 @@ class SiteController extends Controller
                 }
                 // Формирование результата отправки для всех сотрудников
                 $data['smsoResponse'] = $serverOutputs;
+                // Формирование параметров для POST-запроса к СМС-Органайзеру
+                $parameters = array('login' => NotificationForm::LOGIN, 'passwd' => NotificationForm::PASSWORD);
+                // Отправка POST-запроса СМС-Органайзеру для проверки баланса
+                $handle = curl_init();
+                curl_setopt($handle, CURLOPT_URL,NotificationForm::CHECK_BALANCE_LINK);
+                curl_setopt($handle, CURLOPT_POST, 1);
+                curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
+                curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+                $serverOutput = curl_exec($handle);
+                curl_close ($handle);
+                // Формирование текущего баланса
+                $data['balance'] = $serverOutput;
             } else
                 $data = ActiveForm::validate($notificationModel);
             // Возвращение данных

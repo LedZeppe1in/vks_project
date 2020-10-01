@@ -52,7 +52,11 @@ use yii\bootstrap\Tabs;
         let saveFileSuccessMessage = document.getElementById("save-file-success-message");
         // Сообщение об успешном оповещении сотрудников
         let notificationSuccessMessage = document.getElementById("notification-success-message");
-
+        // Слой с отображением текущего баланса
+        let currentBalanceTitle = document.getElementById("current-balance");
+        // Слой с отображением объема рассылки
+        let mailingVolumeTitle = document.getElementById("mailing-volume");
+        // Переменная для хранения списка сотрудников
         let employees;
 
         // Обработка нажатия кнопки проверки
@@ -184,8 +188,11 @@ use yii\bootstrap\Tabs;
                                     document.getElementById("clouddriveform-todate").value;
                                 // Вызов события нажатия кнопки для pjax
                                 document.getElementById("pjax-button").click();
-                                //
+                                // Формирование списка сотрудников для оповещения
                                 employees = data["employees"];
+                                // Если нет ошибок, то вывод текущего баланса
+                                if (data["balance"] != '-1' && data["balance"] != '-2')
+                                    currentBalanceTitle.innerHTML = data["balance"];
                             } else {
                                 // Активация слоя с сообщением о не успешном формировании списка сотрудников для оповещения
                                 employeesWarningMessage.style.display = "block";
@@ -321,6 +328,9 @@ use yii\bootstrap\Tabs;
                         notificationSuccessMessage.style.display = "block";
                         // Деактивация всех слоев с сообщениями
                         saveFileSuccessMessage.style.display = "none";
+                        // Если нет ошибок, то вывод текущего баланса
+                        if (data["balance"] != '-1' && data["balance"] != '-2')
+                            currentBalanceTitle.innerHTML = data["balance"];
                         // Скрытие индикатора прогресса
                         $("#overlay").hide();
                         spinner.stop(target);

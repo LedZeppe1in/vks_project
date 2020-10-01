@@ -30,6 +30,11 @@ use app\components\GoogleSpreadsheet;
             <strong>Оповещение прошло успешно!</strong> Вы успешно оповестили всех сотрудников из списка.
         </div>
 
+        <span><b>Текущий баланс: </b></span>
+        <span id="current-balance" class="badge" style="margin-bottom: 2px;"></span><br /><br />
+        <span><b>Объём рассылки: </b></span>
+        <span id="mailing-volume" class="badge" style="margin-bottom: 2px;"></span>
+
         <h3>Оповещение сотрудников:</h3>
 
         <?php $form = ActiveForm::begin([
