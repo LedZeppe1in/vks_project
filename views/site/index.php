@@ -193,6 +193,8 @@ use yii\bootstrap\Tabs;
                                 // Если нет ошибок, то вывод текущего баланса
                                 if (data["balance"] != '-1' && data["balance"] != '-2')
                                     currentBalanceTitle.innerHTML = data["balance"];
+                                else
+                                    currentBalanceTitle.innerHTML = "не удалось проверить баланс";
                             } else {
                                 // Активация слоя с сообщением о не успешном формировании списка сотрудников для оповещения
                                 employeesWarningMessage.style.display = "block";
@@ -331,6 +333,10 @@ use yii\bootstrap\Tabs;
                         // Если нет ошибок, то вывод текущего баланса
                         if (data["balance"] != '-1' && data["balance"] != '-2')
                             currentBalanceTitle.innerHTML = data["balance"];
+                        else
+                            currentBalanceTitle.innerHTML = "не удалось проверить баланс";
+                        // Формирование информации об объеме рассылки
+                        mailingVolumeTitle.innerHTML = data["mailingVolume"];
                         // Скрытие индикатора прогресса
                         $("#overlay").hide();
                         spinner.stop(target);

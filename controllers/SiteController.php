@@ -446,6 +446,7 @@ class SiteController extends Controller
             // Определение полей модели шаблона факта и валидация формы
             if ($notificationModel->load(Yii::$app->request->post()) && $notificationModel->validate()) {
                 $serverOutputs = array();
+                $allMessages = '';
                 // Успешный ввод данных
                 $data['success'] = true;
                 // Получение списка сотрудников для оповещения
@@ -468,6 +469,8 @@ class SiteController extends Controller
                     $replace = array($dateTime, $employee[6], $employee[7]);
                     // Формирование конкретного сообщения из шаблона путем замены подстрок
                     $message = str_replace($search, $replace, $notificationModel->messageTemplate);
+                    // Запоминание текущего текста сообщения
+                    $allMessages .= $message;
                     // Формирование параметров для POST-запроса к СМС-Органайзеру
                     $parameters = array(
                         'login' => NotificationForm::LOGIN,
@@ -504,6 +507,8 @@ class SiteController extends Controller
                 curl_close ($handle);
                 // Формирование текущего баланса
                 $data['balance'] = $serverOutput;
+                // Формирование объема рассылки
+                $data['mailingVolume'] = round(strlen($allMessages) / 67);
             } else
                 $data = ActiveForm::validate($notificationModel);
             // Возвращение данных
