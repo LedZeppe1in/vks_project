@@ -11,7 +11,20 @@ use yii\base\Model;
  */
 class NotificationForm extends Model
 {
-    const MESSAGE_TEMPLATE_FILE_NAME = 'message-template.txt'; // Название файла для хранения текста шаблона сообщения
+    const SEND_SMS_LINK      = 'http://centrasib.ru/program/smso/1.00/usr_send_sms.php';    // Ссылка отправки сообщений
+    const CHECK_BALANCE_LINK = 'http://centrasib.ru/program/smso/1.00/usr_chk_balance.php'; // Ссылка проверки баланса
+
+    const LOGIN          = 'vks';         // Имя пользователя
+    const PASSWORD       = 'vks';         // Пароль
+    const SENDING_STATUS = 0;             // Статус отправки: 0 - отправить сейчас, 1 - отправить позже
+    const SIGN           = 'VKS company'; // Подпись
+
+    const DATETIME_MARKER  = '<ДАТА; ВРЕМЯ>';          // Маркер даты и времени
+    const ADDRESS_MARKER   = '<АДРЕС ТОРГОВОЙ ТОЧКИ>'; // Маркер адреса
+    const WORK_TYPE_MARKER = '<ВИД РАБОТ>';            // Маркер вида работы (специальности)
+
+    // Название файла для хранения текста шаблона сообщения
+    const MESSAGE_TEMPLATE_FILE_NAME = 'message-template.txt';
 
     public $messageTemplate; // Шаблон текста сообщения
 

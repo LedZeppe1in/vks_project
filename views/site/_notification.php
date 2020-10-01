@@ -23,6 +23,13 @@ use app\components\GoogleSpreadsheet;
             <strong>Сообщение сохранено!</strong> Вы успешно сохранили текст с шаблоном сообщения.
         </div>
 
+        <div id="notification-success-message" class="alert alert-success alert-dismissible" role="alert" style="display: none">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <strong>Оповещение прошло успешно!</strong> Вы успешно оповестили всех сотрудников из списка.
+        </div>
+
         <h3>Оповещение сотрудников:</h3>
 
         <?php $form = ActiveForm::begin([
@@ -35,8 +42,14 @@ use app\components\GoogleSpreadsheet;
             <?= $form->field($notificationModel, 'messageTemplate')->textarea(['rows' => 8]) ?>
 
             <div class="form-group">
-                <?= Html::submitButton('<span class="glyphicon glyphicon-bell"></span> Оповестить',
-                    ['class' => 'btn btn-success', 'name' => 'notification-button']); ?>
+                <?= Button::widget([
+                    'label' => '<span class="glyphicon glyphicon-bell"></span> Оповестить',
+                    'encodeLabel' => false,
+                    'options' => [
+                        'id' => 'notification-button',
+                        'class' => 'btn btn-success'
+                    ]
+                ]); ?>
                 <?= Button::widget([
                     'label' => '<span class="glyphicon glyphicon-save"></span> Сохранить шаблон сообщения',
                     'encodeLabel' => false,

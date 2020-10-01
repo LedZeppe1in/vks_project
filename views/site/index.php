@@ -50,6 +50,10 @@ use yii\bootstrap\Tabs;
         let informationTabLink = document.getElementById("information-tab-link");
         // Сообщение об успешном сохранении файла с текстом шаблона сообщения
         let saveFileSuccessMessage = document.getElementById("save-file-success-message");
+        // Сообщение об успешном оповещении сотрудников
+        let notificationSuccessMessage = document.getElementById("notification-success-message");
+
+        let employees;
 
         // Обработка нажатия кнопки проверки
         $("#checking-button").click(function(e) {
@@ -74,7 +78,7 @@ use yii\bootstrap\Tabs;
                         // Скрытие списка ошибок ввода
                         $("#cloud-drive-form .error-summary").hide();
                         // Если ошибки при проверке таблиц нет
-                        if (!data["checking_error"]) {
+                        if (!data["checkingError"]) {
                             // Активация слоя с сообщением об успешной проверке таблиц
                             checkingSuccessMessage.style.display = "block";
                             // Деативация всех остальных слоев с сообщениями
@@ -168,7 +172,7 @@ use yii\bootstrap\Tabs;
                         // Скрытие списка ошибок ввода
                         $("#cloud-drive-form .error-summary").hide();
                         // Если ошибки при копировании электронной таблицы Google нет
-                        if (!data["copy_error"]) {
+                        if (!data["copyError"]) {
                             // Если список сотрудников для оповещения не сформирован
                             if (data["employees"].length !== 0) {
                                 // Присваивание значениям скрытых полей значений из формы CloudDriveForm
@@ -180,6 +184,8 @@ use yii\bootstrap\Tabs;
                                     document.getElementById("clouddriveform-todate").value;
                                 // Вызов события нажатия кнопки для pjax
                                 document.getElementById("pjax-button").click();
+                                //
+                                employees = data["employees"];
                             } else {
                                 // Активация слоя с сообщением о не успешном формировании списка сотрудников для оповещения
                                 employeesWarningMessage.style.display = "block";
@@ -269,12 +275,61 @@ use yii\bootstrap\Tabs;
                         $("#notification-form .error-summary").hide();
                         // Активация слоя с сообщением об успешном сохранении файла с текстом шаблона сообщения
                         saveFileSuccessMessage.style.display = "block";
+                        // Деактивация всех слоев с сообщениями
+                        notificationSuccessMessage.style.display = "none";
                         // Скрытие индикатора прогресса
                         $("#overlay").hide();
                         spinner.stop(target);
                     } else {
                         // Деактивация всех слоев с сообщениями
                         saveFileSuccessMessage.style.display = "none";
+                        notificationSuccessMessage.style.display = "none";
+                        // Отображение ошибок ввода
+                        viewErrors("#notification-form", data);
+                        // Скрытие индикатора прогресса
+                        $("#overlay").hide();
+                        spinner.stop(target);
+                    }
+                },
+                error: function() {
+                    // Скрытие индикатора прогресса
+                    $("#overlay").hide();
+                    spinner.stop(target);
+                    alert("Непредвиденная ошибка!");
+                }
+            });
+        });
+
+        // Обработка нажатия кнопки оповещения сотрудников
+        $("#notification-button").click(function(e) {
+            // Отмена поведения кнопки по умолчанию (submit)
+            e.preventDefault();
+            // Форма с полем шаблона текста сообщения
+            let form = $("#notification-form");
+            // Ajax-запрос
+            $.ajax({
+                url: "<?= Yii::$app->request->baseUrl . '/notify-employees' ?>",
+                type: "post",
+                data: form.serialize() + "&employees=" + JSON.stringify(employees),
+                dataType: "json",
+                success: function(data) {
+                    // Если валидация прошла успешно (нет ошибок ввода)
+                    if (data["success"]) {
+                        // Скрытие списка ошибок ввода
+                        $("#notification-form .error-summary").hide();
+                        // Активация слоя с сообщением об успешном сохранении файла с текстом шаблона сообщения
+                        notificationSuccessMessage.style.display = "block";
+                        // Деактивация всех слоев с сообщениями
+                        saveFileSuccessMessage.style.display = "none";
+                        // Скрытие индикатора прогресса
+                        $("#overlay").hide();
+                        spinner.stop(target);
+                        //
+                        console.log(data["smsoResponse"]);
+                    } else {
+                        // Деактивация всех слоев с сообщениями
+                        saveFileSuccessMessage.style.display = "none";
+                        notificationSuccessMessage.style.display = "none";
                         // Отображение ошибок ввода
                         viewErrors("#notification-form", data);
                         // Скрытие индикатора прогресса

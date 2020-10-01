@@ -2,6 +2,7 @@
 
 namespace app\controllers;
 
+use DateTime;
 use Yii;
 use yii\web\Response;
 use yii\web\Controller;
@@ -80,7 +81,7 @@ class SiteController extends Controller
             // Определение полей модели шаблона факта и валидация формы
             if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
                 // Успешный ввод данных
-                $data["success"] = true;
+                $data['success'] = true;
                 // Содание объекта для работы с Google-таблицей
                 $googleSpreadsheet = new GoogleSpreadsheet();
                 // Содание объекта для работы с Yandex-таблицей
@@ -98,14 +99,14 @@ class SiteController extends Controller
                 // Если проверка прошла успешно (файлы существуют)
                 if ($googleResource !== false && $yandexResource !== false) {
                     // Наличие ошибки при проверке
-                    $data["checking_error"] = false;
+                    $data['checkingError'] = false;
                     // Получение метаинформации о файле электронной таблицы от Google
-                    $data["googleResource"] = $googleResource;
+                    $data['googleResource'] = $googleResource;
                     // Получение метаинформации о файле электронной таблицы от Yandex
-                    $data["yandexResource"] = $yandexResource;
+                    $data['yandexResource'] = $yandexResource;
                 } else
                     // Наличие ошибки при проверке
-                    $data["checking_error"] = true;
+                    $data['checkingError'] = true;
             } else
                 $data = ActiveForm::validate($cloudDriveModel);
             // Возвращение данных
@@ -381,7 +382,7 @@ class SiteController extends Controller
             // Определение полей модели шаблона факта и валидация формы
             if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
                 // Успешный ввод данных
-                $data["success"] = true;
+                $data['success'] = true;
                 // Пусть до папки с таблицами
                 $path = Yii::$app->basePath . '/web/spreadsheets/';
                 // Содание объекта для работы с Google-таблицей
@@ -394,16 +395,93 @@ class SiteController extends Controller
                 // Если нет ошибки при копировании электронной таблицы Google на сервер
                 if ($copyGoogleSuccess) {
                     // Ошибки при копировании файла электронной таблицы нет
-                    $data["copy_error"] = false;
+                    $data['copyError'] = false;
                     // Формирование массива дат для выборки строк
                     $dates = $cloudDriveModel->getDates();
                     // Получение списка сотрудников для оповещения
-                    $data["employees"] = $googleSpreadsheet->getEmployeesList($path, $dates);
+                    $data['employees'] = $googleSpreadsheet->getEmployeesList($path, $dates);
                 } else
                     // Наличие ошибки при копировании файла электронной таблицы
-                    $data["copy_error"] = true;
+                    $data['copyError'] = true;
             } else
                 $data = ActiveForm::validate($cloudDriveModel);
+            // Возвращение данных
+            $response->data = $data;
+
+            return $response;
+        }
+
+        return false;
+    }
+
+    /**
+     * Оповещение сотрудников.
+     *
+     * @return bool|\yii\console\Response|Response
+     * @throws \Exception
+     */
+    public function actionNotifyEmployees()
+    {
+        // Ajax-запрос
+        if (Yii::$app->request->isAjax) {
+            // Определение массива возвращаемых данных
+            $data = array();
+            // Установка формата JSON для возвращаемых данных
+            $response = Yii::$app->response;
+            $response->format = Response::FORMAT_JSON;
+            // Формирование модели (формы) NotificationForm
+            $notificationModel = new NotificationForm();
+            // Определение полей модели шаблона факта и валидация формы
+            if ($notificationModel->load(Yii::$app->request->post()) && $notificationModel->validate()) {
+                $serverOutputs = array();
+                // Успешный ввод данных
+                $data['success'] = true;
+                // Получение списка сотрудников для оповещения
+                $employees = json_decode(Yii::$app->request->post('employees'));
+                // Обход всех сотрудников из списка оповещения
+                foreach ($employees as $employee) {
+                    // Массив поисковых маркеров в тексте
+                    $search = array(
+                        NotificationForm::DATETIME_MARKER,
+                        NotificationForm::ADDRESS_MARKER,
+                        NotificationForm::WORK_TYPE_MARKER
+                    );
+                    // Формирование даты и времени
+                    $date = new DateTime($employee[3]->date);
+                    $startTime = new DateTime($employee[4]->date);
+                    $endTime = new DateTime($employee[5]->date);
+                    $dateTime = $date->format('d.m.Y') . '; ' . $startTime->format('H:i') . '-' .
+                        $endTime->format('H:i');
+                    // Массив замены
+                    $replace = array($dateTime, $employee[6], $employee[7]);
+                    // Формирование конкретного сообщения из шаблона путем замены подстрок
+                    $message = str_replace($search, $replace, $notificationModel->messageTemplate);
+                    // Формирование параметров для POST-запроса к СМС-Органайзеру
+                    $parameters = array(
+                        'login' => NotificationForm::LOGIN,
+                        'passwd' => NotificationForm::PASSWORD,
+                        'date_send' => '',
+                        'status' => NotificationForm::SENDING_STATUS,
+                        'txt' => iconv('UTF-8', 'CP1251', $message),
+                        'smscnt' => 2,
+                        'to' => '89501049945', //$employee[2] // реальный номер телефона сотрудника
+                        'sign' => NotificationForm::SIGN
+                    );
+                    // Отправка POST-запроса СМС-Органайзеру для отправки сообщений
+                    $handle = curl_init();
+                    curl_setopt($handle, CURLOPT_URL,NotificationForm::SEND_SMS_LINK);
+                    curl_setopt($handle, CURLOPT_POST, 1);
+                    curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
+                    curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+                    $serverOutput = curl_exec($handle);
+                    curl_close ($handle);
+                    // Формирование результата отправки для текущего сотрудника
+                    array_push($serverOutputs, $serverOutput);
+                }
+                // Формирование результата отправки для всех сотрудников
+                $data['smsoResponse'] = $serverOutputs;
+            } else
+                $data = ActiveForm::validate($notificationModel);
             // Возвращение данных
             $response->data = $data;
 
@@ -433,7 +511,7 @@ class SiteController extends Controller
             // Определение полей модели (формы) оповещения и валидация формы
             if ($notificationModel->load(Yii::$app->request->post()) && $notificationModel->validate()) {
                 // Успешный ввод данных
-                $data["success"] = true;
+                $data['success'] = true;
                 // Пусть до папки с текстовым файлом шаблона сообщения
                 $path = Yii::$app->basePath . '/web/';
                 // Открытие файла на запись для сохранения шаблона сообщения
