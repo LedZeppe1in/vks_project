@@ -452,7 +452,38 @@ class SiteController extends Controller
                     // Формирование массива дат для выборки строк
                     $dates = $cloudDriveModel->getDates();
                     // Получение списка сотрудников для оповещения
-                    $data['employees'] = $googleSpreadsheet->getEmployeesList($path, $dates);
+                    $employees = $googleSpreadsheet->getEmployeesList($path, $dates);
+                    // Формирование списка сотрудников для оповещения
+                    $data['employees'] = $employees;
+                    // Переменная для хранения сообщений для всех сотрудников из списка оповещения
+                    $allMessages = '';
+                    // Если существует файл с текстом шаблона сообщения, то определяем значение поля текста с этого файла
+                    if (file_exists(Yii::$app->basePath . '/web/' .
+                        NotificationForm::MESSAGE_TEMPLATE_FILE_NAME)) {
+                        // Получение текста шаблона сообщения
+                        $messageTemplate = file_get_contents(Yii::$app->basePath . '/web/' .
+                            NotificationForm::MESSAGE_TEMPLATE_FILE_NAME);
+                        // Обход всех сотрудников из списка оповещения
+                        foreach ($employees as $employee) {
+                            // Массив поисковых маркеров в тексте
+                            $search = array(
+                                NotificationForm::DATETIME_MARKER,
+                                NotificationForm::ADDRESS_MARKER,
+                                NotificationForm::WORK_TYPE_MARKER
+                            );
+                            // Формирование даты и времени
+                            $dateTime = $employee[3]->format('d.m.Y') . '; ' . $employee[4]->format('H:i') . '-' .
+                                $employee[5]->format('H:i');
+                            // Массив замены
+                            $replace = array($dateTime, $employee[6], $employee[7]);
+                            // Формирование конкретного сообщения из шаблона путем замены подстрок
+                            $message = str_replace($search, $replace, $messageTemplate);
+                            // Запоминание текущего текста сообщения
+                            $allMessages .= $message;
+                        }
+                    }
+                    // Формирование объема рассылки
+                    $data['mailingVolume'] = round(strlen($allMessages) / 67);
                     // Формирование параметров для POST-запроса к СМС-Органайзеру
                     $parameters = array('login' => NotificationForm::LOGIN, 'passwd' => NotificationForm::PASSWORD);
                     // Отправка POST-запроса СМС-Органайзеру для проверки баланса
@@ -465,6 +496,7 @@ class SiteController extends Controller
                     curl_close ($handle);
                     // Формирование текущего баланса
                     $data['balance'] = $serverOutput;
+
                 } else
                     // Наличие ошибки при копировании файла электронной таблицы
                     $data['copyError'] = true;
@@ -499,7 +531,6 @@ class SiteController extends Controller
             // Определение полей модели шаблона факта и валидация формы
             if ($notificationModel->load(Yii::$app->request->post()) && $notificationModel->validate()) {
                 $serverOutputs = array();
-                $allMessages = '';
                 // Успешный ввод данных
                 $data['success'] = true;
                 // Получение списка сотрудников для оповещения
@@ -522,8 +553,6 @@ class SiteController extends Controller
                     $replace = array($dateTime, $employee[6], $employee[7]);
                     // Формирование конкретного сообщения из шаблона путем замены подстрок
                     $message = str_replace($search, $replace, $notificationModel->messageTemplate);
-                    // Запоминание текущего текста сообщения
-                    $allMessages .= $message;
                     // Формирование параметров для POST-запроса к СМС-Органайзеру
                     $parameters = array(
                         'login' => NotificationForm::LOGIN,
@@ -560,8 +589,6 @@ class SiteController extends Controller
                 curl_close ($handle);
                 // Формирование текущего баланса
                 $data['balance'] = $serverOutput;
-                // Формирование объема рассылки
-                $data['mailingVolume'] = round(strlen($allMessages) / 67);
             } else
                 $data = ActiveForm::validate($notificationModel);
             // Возвращение данных
