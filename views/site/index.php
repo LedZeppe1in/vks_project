@@ -34,6 +34,8 @@ use yii\bootstrap\Tabs;
         let checkingSuccessMessage = document.getElementById("checking-success-message");
         // Сообщение об ошибке проверки таблиц
         let checkingErrorMessage = document.getElementById("checking-error-message");
+        // Сообщение об успешнос сохранении путей к файлам электронных таблиц
+        let savePathsSuccessMessage = document.getElementById("save-paths-success-message");
         // Сообщение об ошибке копировании электронной таблицы Google
         let copyErrorMessage = document.getElementById("copy-error-message");
         // Сообщение о не сформированном списке рассылки
@@ -87,6 +89,7 @@ use yii\bootstrap\Tabs;
                             checkingSuccessMessage.style.display = "block";
                             // Деативация всех остальных слоев с сообщениями
                             checkingErrorMessage.style.display = "none";
+                            savePathsSuccessMessage.style.display = "none";
                             copyErrorMessage.style.display = "none";
                             employeesWarningMessage.style.display = "none";
                             employeesSuccessMessage.style.display = "none";
@@ -128,6 +131,7 @@ use yii\bootstrap\Tabs;
                             checkingErrorMessage.style.display = "block";
                             // Деативация всех остальных слоев с сообщениями
                             checkingSuccessMessage.style.display = "none";
+                            savePathsSuccessMessage.style.display = "none";
                             copyErrorMessage.style.display = "none";
                             employeesWarningMessage.style.display = "none";
                             employeesSuccessMessage.style.display = "none";
@@ -137,6 +141,64 @@ use yii\bootstrap\Tabs;
                         }
                     } else {
                         // Деактивация всех слоев с сообщениями
+                        savePathsSuccessMessage.style.display = "none";
+                        copyErrorMessage.style.display = "none";
+                        employeesWarningMessage.style.display = "none";
+                        employeesSuccessMessage.style.display = "none";
+                        checkingErrorMessage.style.display = "none";
+                        checkingSuccessMessage.style.display = "none";
+                        // Отображение ошибок ввода
+                        viewErrors("#cloud-drive-form", data);
+                        // Скрытие индикатора прогресса
+                        $("#overlay").hide();
+                        spinner.stop(target);
+                    }
+                },
+                error: function() {
+                    // Скрытие индикатора прогресса
+                    $("#overlay").hide();
+                    spinner.stop(target);
+                    alert("Непредвиденная ошибка!");
+                }
+            });
+        });
+
+        // Обработка нажатия кнопки сохранения путей
+        $("#save-paths-button").click(function(e) {
+            // Отмена поведения кнопки по умолчанию (submit)
+            e.preventDefault();
+            // Форма с полями
+            let form = $("#cloud-drive-form");
+            // Скрытие слоев с подробной информацией о файлах электронных таблиц
+            googleMetaInformationTitle.style.display = "none";
+            googleMetaInformation.style.display = "none";
+            yandexMetaInformationTitle.style.display = "none";
+            yandexMetaInformation.style.display = "none";
+            // Ajax-запрос
+            $.ajax({
+                url: "<?= Yii::$app->request->baseUrl . '/save-paths' ?>",
+                type: "post",
+                data: form.serialize(),
+                dataType: "json",
+                success: function(data) {
+                    // Если валидация прошла успешно (нет ошибок ввода)
+                    if (data["success"]) {
+                        // Скрытие списка ошибок ввода
+                        $("#cloud-drive-form .error-summary").hide();
+                        // Активация слоя с сообщением об успешном сохранении файла с путями к электронным таблицам
+                        savePathsSuccessMessage.style.display = "block";
+                        // Деактивация всех слоев с сообщениями
+                        copyErrorMessage.style.display = "none";
+                        employeesWarningMessage.style.display = "none";
+                        employeesSuccessMessage.style.display = "none";
+                        checkingErrorMessage.style.display = "none";
+                        checkingSuccessMessage.style.display = "none";
+                        // Скрытие индикатора прогресса
+                        $("#overlay").hide();
+                        spinner.stop(target);
+                    } else {
+                        // Деактивация всех слоев с сообщениями
+                        savePathsSuccessMessage.style.display = "none";
                         copyErrorMessage.style.display = "none";
                         employeesWarningMessage.style.display = "none";
                         employeesSuccessMessage.style.display = "none";
@@ -164,6 +226,11 @@ use yii\bootstrap\Tabs;
             e.preventDefault();
             // Форма с полями
             let form = $("#cloud-drive-form");
+            // Скрытие слоев с подробной информацией о файлах электронных таблиц
+            googleMetaInformationTitle.style.display = "none";
+            googleMetaInformation.style.display = "none";
+            yandexMetaInformationTitle.style.display = "none";
+            yandexMetaInformation.style.display = "none";
             // Ajax-запрос
             $.ajax({
                 url: "<?= Yii::$app->request->baseUrl . '/get-mailing-list' ?>",
@@ -199,6 +266,7 @@ use yii\bootstrap\Tabs;
                                 // Активация слоя с сообщением о не успешном формировании списка сотрудников для оповещения
                                 employeesWarningMessage.style.display = "block";
                                 // Деативация всех остальных слоев с сообщениями
+                                savePathsSuccessMessage.style.display = "none";
                                 copyErrorMessage.style.display = "none";
                                 employeesSuccessMessage.style.display = "none";
                                 checkingErrorMessage.style.display = "none";
@@ -214,6 +282,7 @@ use yii\bootstrap\Tabs;
                             // Активация слоя с сообщением об ошибке копировании Google-таблицы
                             copyErrorMessage.style.display = "block";
                             // Деативация всех остальных слоев с сообщениями
+                            savePathsSuccessMessage.style.display = "none";
                             employeesWarningMessage.style.display = "none";
                             employeesSuccessMessage.style.display = "none";
                             checkingErrorMessage.style.display = "none";
@@ -227,6 +296,7 @@ use yii\bootstrap\Tabs;
                         }
                     } else {
                         // Деактивация всех слоев с сообщениями
+                        savePathsSuccessMessage.style.display = "none";
                         copyErrorMessage.style.display = "none";
                         employeesWarningMessage.style.display = "none";
                         employeesSuccessMessage.style.display = "none";
@@ -253,6 +323,7 @@ use yii\bootstrap\Tabs;
             // Активация слоя с сообщением об успешном формировании списка сотрудников для оповещения
             employeesSuccessMessage.style.display = "block";
             // Деативация всех остальных слоев с сообщениями
+            savePathsSuccessMessage.style.display = "none";
             copyErrorMessage.style.display = "none";
             employeesWarningMessage.style.display = "none";
             checkingErrorMessage.style.display = "none";

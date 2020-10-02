@@ -136,6 +136,14 @@ class SiteController extends Controller
         $path = Yii::$app->basePath . '/web/spreadsheets/';
         // Формирование модели (формы) CloudDriveForm
         $cloudDriveModel = new CloudDriveForm();
+        // Если существует файл с путем к электронной таблице на Google-диске
+        if (file_exists(Yii::$app->basePath . '/web/' . CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME))
+            $cloudDriveModel->googleFileLink = file_get_contents(Yii::$app->basePath . '/web/' .
+                CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME);
+        // Если существует файл с путем к электронной таблице на Yandex-диске
+        if (file_exists(Yii::$app->basePath . '/web/' . CloudDriveForm::YANDEX_SPREADSHEET_FILE_NAME))
+            $cloudDriveModel->yandexFilePath = file_get_contents(Yii::$app->basePath . '/web/' .
+                CloudDriveForm::YANDEX_SPREADSHEET_FILE_NAME);
         // Формирование модели (формы) NotificationForm
         $notificationModel = new NotificationForm();
         // Если существует файл с текстом шаблона сообщения, то определяем значение поля текста с этого файла
@@ -360,6 +368,51 @@ class SiteController extends Controller
             'notificationModel' => $notificationModel,
             'employees' => $employees,
         ]);
+    }
+
+    /**
+     * Сохранение путей к файлам электронных таблиц на облачных дисках Google и Yandex.
+     *
+     * @return bool|\yii\console\Response|Response
+     */
+    public function actionSavePaths()
+    {
+        // Ajax-запрос
+        if (Yii::$app->request->isAjax) {
+            // Определение массива возвращаемых данных
+            $data = array();
+            // Установка формата JSON для возвращаемых данных
+            $response = Yii::$app->response;
+            $response->format = Response::FORMAT_JSON;
+            // Формирование модели (формы) CloudDriveForm
+            $cloudDriveModel = new CloudDriveForm();
+            // Определение полей модели (формы) оповещения и валидация формы
+            if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
+                // Успешный ввод данных
+                $data['success'] = true;
+                // Пусть до папки с текстовыми файлам путей к электронным таблицам
+                $path = Yii::$app->basePath . '/web/';
+                // Открытие файла на запись чтобы сохранить путь к электронной таблицы на Google-диске
+                $googleFile = fopen($path . CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME, 'w');
+                // Запись в файл путь к электронной таблицы на Google-диске
+                fwrite($googleFile, $cloudDriveModel->googleFileLink);
+                // Закрытие файла
+                fclose($googleFile);
+                // Открытие файла на запись чтобы сохранить путь к электронной таблицы на Yandex-диске
+                $yandexFile = fopen($path . CloudDriveForm::YANDEX_SPREADSHEET_FILE_NAME, 'w');
+                // Запись в файл путь к электронной таблицы на Yandex-диске
+                fwrite($yandexFile, $cloudDriveModel->yandexFilePath);
+                // Закрытие файла
+                fclose($yandexFile);
+            } else
+                $data = ActiveForm::validate($cloudDriveModel);
+            // Возвращение данных
+            $response->data = $data;
+
+            return $response;
+        }
+
+        return false;
     }
 
     /**

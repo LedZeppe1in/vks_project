@@ -28,6 +28,13 @@ use app\models\CloudDriveForm;
             <strong>Ошибка!</strong> Проверка прошла с ошибкой, возможно Вы неверно указали ссылку или путь на файлы электронных таблиц.
         </div>
 
+        <div id="save-paths-success-message" class="alert alert-success alert-dismissible" role="alert" style="display: none">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <strong>Пути сохранены!</strong> Вы успешно сохранили пути к файлам электронных таблиц.
+        </div>
+
         <div id="copy-error-message" class="alert alert-danger alert-dismissible" role="alert" style="display: none">
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
@@ -56,11 +63,9 @@ use app\models\CloudDriveForm;
 
             <?= $form->errorSummary($cloudDriveModel); ?>
 
-            <?= $form->field($cloudDriveModel, 'googleFileLink')
-                ->textInput(['value' => CloudDriveForm::GOOGLE_FILE_LINK]) ?>
+            <?= $form->field($cloudDriveModel, 'googleFileLink')->textInput() ?>
 
-            <?= $form->field($cloudDriveModel, 'yandexFilePath')
-                ->textInput(['value' => CloudDriveForm::YANDEX_FILE_PATH]) ?>
+            <?= $form->field($cloudDriveModel, 'yandexFilePath')->textInput() ?>
 
             <div style="width: 300px; margin-bottom: 10px;">
                 <label class="control-label has-star">Даты выборки</label>
@@ -89,14 +94,22 @@ use app\models\CloudDriveForm;
             </span>
 
             <div class="form-group">
-                    <?= Button::widget([
-                        'label' => '<span class="glyphicon glyphicon-check"></span> Проверить',
-                        'encodeLabel' => false,
-                        'options' => [
-                            'id' => 'checking-button',
-                            'class' => 'btn btn-primary'
-                        ]
-                    ]); ?>
+                <?= Button::widget([
+                    'label' => '<span class="glyphicon glyphicon-check"></span> Проверить',
+                    'encodeLabel' => false,
+                    'options' => [
+                        'id' => 'checking-button',
+                        'class' => 'btn btn-primary'
+                    ]
+                ]); ?>
+                <?= Button::widget([
+                    'label' => '<span class="glyphicon glyphicon-floppy-save"></span> Запомнить пути',
+                    'encodeLabel' => false,
+                    'options' => [
+                        'id' => 'save-paths-button',
+                        'class' => 'btn btn-primary'
+                    ]
+                ]); ?>
                 <?= Html::submitButton('<span class="glyphicon glyphicon-refresh"></span> Синхронизировать с Яндекс-диском',
                     ['class' => 'btn btn-success', 'name' => 'synchronization-button', 'value' => 'yandex-synchronization']); ?>
                 <?= Html::submitButton('<span class="glyphicon glyphicon-refresh"></span> Синхронизировать с  Google-диском',
@@ -106,7 +119,7 @@ use app\models\CloudDriveForm;
                     'encodeLabel' => false,
                     'options' => [
                         'id' => 'mailing-button',
-                        'class' => 'btn btn-primary'
+                        'class' => 'btn btn-success'
                     ]
                 ]); ?>
             </div>

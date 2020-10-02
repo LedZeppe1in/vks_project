@@ -14,14 +14,14 @@ use yii\base\Model;
  */
 class CloudDriveForm extends Model
 {
-    // Ссылка на файл электронной таблицы на Google Sheets
-    const GOOGLE_FILE_LINK = 'https://drive.google.com/file/d/1yXDjKGhsQj69q1xi4LYBXCCZCw8ktDre/view?usp=sharing';
+    // Название файла для хранения электронной таблицы на Google-диске
+    const GOOGLE_SPREADSHEET_FILE_NAME = 'google-spreadsheet-path.txt';
     // Данные для подключения к аккаунту Google
     const GOOGLE_LOGIN     = 'centrasib@gmail.com';
     const GOOGLE_PASSWORD  = 'cnhjxrf1';
 
-    // Путь к файлу электронной таблицы на Yandex-диске
-    const YANDEX_FILE_PATH = '/ВКС/yandex-test-spreadsheet.xlsx';
+    // Название файла для хранения электронной таблицы на Yandex-диске
+    const YANDEX_SPREADSHEET_FILE_NAME = 'yandex-spreadsheet-path.txt';
     // Данные для подключения к аккаунту Yandex
     const YANDEX_LOGIN     = 'info@centrasib.ru';
     const YANDEX_PASSWORD  = 'cnhjxrf1';
