@@ -33,8 +33,13 @@ class YandexSpreadsheet
     const SURNAME_HEADING     = 'Фамилия';
     const COMMENT_HEADING     = 'Комментарий';
 
-    public $fileName = 'yandex-spreadsheet.xlsx';        // Название файла электронной таблицы на сервере для обработки
-    public $newFileName = 'new-yandex-spreadsheet.xlsx'; // Название нового файла электронной таблицы на сервере после обработки
+    // Цвета для подсветки добавленных строк
+    const GREEN_COLOR_1 = 'dbead5';
+    const GREEN_COLOR_2 = '7ef87e';
+
+    public $fileName      = 'yandex-spreadsheet.xlsx';     // Название файла электронной таблицы на сервере для обработки
+    public $newFileName   = 'new-yandex-spreadsheet.xlsx'; // Название нового файла электронной таблицы на сервере после обработки
+    public $colorFileName = 'current-cell-color.txt';      // Название файла с текущим цветом для подсветки добавленных строк
 
     /**
      * Проверка существования файла электронной таблицы на Yandex-диске.
@@ -190,7 +195,24 @@ class YandexSpreadsheet
             }
         }
         // Если массив с найденными строками в Google-таблице не пустой
-        if (!empty($googleSpreadsheetRows))
+        if (!empty($googleSpreadsheetRows)) {
+            // Если существует файл с цветом для подсветки добавленных строк
+            if (file_exists($path . $this->colorFileName))
+                // Получение текущего цвета подсветки добавленных строк из файла
+                $currentColor = file_get_contents($path . $this->colorFileName);
+            else
+                $currentColor = self::GREEN_COLOR_2;
+            // Смена цвета для подсветки добавленных строк
+            if ($currentColor == self::GREEN_COLOR_1)
+                $currentColor = self::GREEN_COLOR_2;
+            else
+                $currentColor = self::GREEN_COLOR_1;
+            // Открытие файла на запись для сохранения цвета подсветки добавленных строк
+            $file = fopen($path . $this->colorFileName, 'w');
+            // Запись в файл текущего цвета для подсветки добавленных строк
+            fwrite($file, $currentColor);
+            // Закрытие файла
+            fclose($file);
             // Добавление новых строк в Yandex-таблицу
             foreach ($googleSpreadsheetRows as $googleSpreadsheetRow) {
                 // Добавление новой строки в конец электронной таблицы
@@ -218,12 +240,13 @@ class YandexSpreadsheet
                 $worksheet->setCellValue('E' . $row, $excelEndTimeValue);
                 $worksheet->setCellValue('F' . $row, $googleSpreadsheetRow[5]);
                 // Задание цвета ячеек
-                $worksheet->getStyle('A'.$row.':L'.$row)
+                $worksheet->getStyle('A' . $row . ':L' . $row)
                     ->getFill()
                     ->setFillType(Fill::FILL_SOLID)
                     ->getStartColor()
-                    ->setARGB('dbead5');
+                    ->setARGB($currentColor);
             }
+        }
         // Обновление файла Yandex-таблицы
         $writer = new Xlsx($spreadsheet);
         $writer->save($path . $this->newFileName);

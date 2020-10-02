@@ -532,7 +532,7 @@ class SiteController extends Controller
                         'status' => NotificationForm::SENDING_STATUS,
                         'txt' => iconv('UTF-8', 'CP1251', $message),
                         'smscnt' => 2,
-                        'to' => '89501049945', //$employee[2] // реальный номер телефона сотрудника
+                        'to' => '89148840743', //$employee[2] // реальный номер телефона сотрудника
                         'sign' => NotificationForm::SIGN
                     );
                     // Отправка POST-запроса СМС-Органайзеру для отправки сообщений
