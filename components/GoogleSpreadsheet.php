@@ -66,7 +66,7 @@ class GoogleSpreadsheet
     function getToken($oauthPath)
     {
         $client = new Google_Client();
-        $client->setApplicationName('vks-project');
+        $client->setApplicationName('vks project');
         $client->setScopes(Google_Service_Drive::DRIVE);
         $client->setAuthConfig($oauthPath . $this->oauthCredentials);
         $client->setRedirectUri('http://localhost');

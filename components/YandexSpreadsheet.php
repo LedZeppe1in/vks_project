@@ -16,7 +16,7 @@ use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
  */
 class YandexSpreadsheet
 {
-    // Токен для Яндекс.Диск REST API
+    // Токен для Яндекс.Диск REST API (VKS)
     const TOKEN  = 'AgAEA7qgt0CSAAaU22zcxLZGt0T9jHjkiESKl6o';
 
     // Название вкладки таблицы
@@ -196,23 +196,35 @@ class YandexSpreadsheet
         }
         // Если массив с найденными строками в Google-таблице не пустой
         if (!empty($googleSpreadsheetRows)) {
+            $currentColor = self::GREEN_COLOR_2;
+            $currentDate = date('d.m.Y');
             // Если существует файл с цветом для подсветки добавленных строк
-            if (file_exists($path . $this->colorFileName))
+            if (file_exists($path . $this->colorFileName)) {
                 // Получение текущего цвета подсветки добавленных строк из файла
-                $currentColor = file_get_contents($path . $this->colorFileName);
-            else
-                $currentColor = self::GREEN_COLOR_2;
-            // Смена цвета для подсветки добавленных строк
-            if ($currentColor == self::GREEN_COLOR_1)
-                $currentColor = self::GREEN_COLOR_2;
-            else
-                $currentColor = self::GREEN_COLOR_1;
-            // Открытие файла на запись для сохранения цвета подсветки добавленных строк
-            $file = fopen($path . $this->colorFileName, 'w');
-            // Запись в файл текущего цвета для подсветки добавленных строк
-            fwrite($file, $currentColor);
-            // Закрытие файла
-            fclose($file);
+                $line = 0;
+                $fh = fopen($path . $this->colorFileName, 'r');
+                while (($buffer = fgets($fh)) !== FALSE) {
+                    if ($line == 0)
+                        $currentColor = $buffer;
+                    if ($line == 1)
+                        $currentDate = $buffer;
+                    $line++;
+                }
+                fclose($fh);
+            }
+            // Если файл с цветом для подсветки добавленных строк не существует или
+            // переменная с датой не равна текущей дате
+            if (file_exists($path . $this->colorFileName) == false || $currentDate != date('d.m.Y')) {
+                // Обновление переменной с текущей датой
+                $currentDate = date('d.m.Y');
+                // Смена цвета для подсветки добавленных строк
+                if ($currentColor == self::GREEN_COLOR_1 . PHP_EOL)
+                    $currentColor = self::GREEN_COLOR_2;
+                else
+                    $currentColor = self::GREEN_COLOR_1;
+                // Запись в файл текущего цвета для подсветки добавленных строк
+                file_put_contents($path . $this->colorFileName, $currentColor . PHP_EOL . $currentDate);
+            }
             // Добавление новых строк в Yandex-таблицу
             foreach ($googleSpreadsheetRows as $googleSpreadsheetRow) {
                 // Добавление новой строки в конец электронной таблицы
