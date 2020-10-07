@@ -37,7 +37,7 @@ class GoogleSpreadsheet
     const REQUEST_ADJUSTMENTS_HEADING      = 'Корректировки заявок';
 
     public $oauthCredentials = 'client_id.json';         // Название файла с учетными данными от Google
-    public $tokenFileName = 'token.json';                // Название файла с token от Google
+    public $tokenFileName = 'token.json';                // Название файла c токеном для доступа к Google-диску
     public $fileName = 'google-spreadsheet.xlsx';        // Название файла с электронной таблицей на сервере
     public $newFileName = 'new-google-spreadsheet.xlsx'; // Название нового файла электронной таблицы на сервере после обработки
 

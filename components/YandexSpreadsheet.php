@@ -16,9 +16,6 @@ use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
  */
 class YandexSpreadsheet
 {
-    // Токен для Яндекс.Диск REST API (VKS)
-    const TOKEN  = 'AgAEA7qgt0CSAAaU22zcxLZGt0T9jHjkiESKl6o';
-
     // Название вкладки таблицы
     const FIRST_SHEET_SHEET  = 'Лист1';
 
@@ -37,6 +34,7 @@ class YandexSpreadsheet
     const GREEN_COLOR_1 = 'dbead5';
     const GREEN_COLOR_2 = '7ef87e';
 
+    public $tokenFileName = 'token.txt';                   // Название файла c токеном для доступа к Yandex-диску
     public $fileName      = 'yandex-spreadsheet.xlsx';     // Название файла электронной таблицы на сервере для обработки
     public $newFileName   = 'new-yandex-spreadsheet.xlsx'; // Название нового файла электронной таблицы на сервере после обработки
     public $colorFileName = 'current-cell-color.txt';      // Название файла с текущим цветом для подсветки добавленных строк
@@ -44,17 +42,23 @@ class YandexSpreadsheet
     /**
      * Проверка существования файла электронной таблицы на Yandex-диске.
      *
+     * @param $oauthPath - путь к файлу c токеном для доступа к Yandex-диску
      * @param $yandexFilePath - полный путь к файлу электронной таблицы на Yandex-диске
      * @return bool|mixed - метаинформация о файле электронной таблицы от Yandex, иначе false
      */
-    public function checkingSpreadsheet($yandexFilePath)
+    public function checkingSpreadsheet($oauthPath, $yandexFilePath)
     {
+        // Получение токена для доступа к Yandex-диску
+        if (file_exists($oauthPath . $this->tokenFileName))
+            $accessToken = file_get_contents($oauthPath . $this->tokenFileName);
+        else
+            $accessToken = '';
         // Формирование URL для проверки файла электронной таблицы с Yandex-диска
         $urlYandexDisk  = 'https://cloud-api.yandex.net/v1/disk/resources?path=' . urlencode($yandexFilePath);
         // Получение URL-ссылки на файл электронной таблицы с Yandex-диска
         $handle = curl_init();
         curl_setopt($handle, CURLOPT_URL, $urlYandexDisk);
-        curl_setopt($handle, CURLOPT_HTTPHEADER, array('Authorization: OAuth ' . self::TOKEN));
+        curl_setopt($handle, CURLOPT_HTTPHEADER, array('Authorization: OAuth ' . $accessToken));
         curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
@@ -106,16 +110,22 @@ class YandexSpreadsheet
     /**
      * Копирование файла электронной таблицы с Yandex-диска на сервер по полному пути файла.
      *
+     * @param $oauthPath - путь к файлу c токеном для доступа к Yandex-диску
      * @param $yandexFilePath - полный путь к файлу электронной таблицы на Yandex-диске
      * @param $path - путь сохранения файла электронной таблицы на сервере
      * @return bool - успешность копирования
      */
-    public function copySpreadsheetByPathToServer($yandexFilePath, $path)
+    public function copySpreadsheetByPathToServer($oauthPath, $yandexFilePath, $path)
     {
+        // Получение токена для доступа к Yandex-диску
+        if (file_exists($oauthPath . $this->tokenFileName))
+            $accessToken = file_get_contents($oauthPath . $this->tokenFileName);
+        else
+            $accessToken = '';
         // Получение ссылки на скачивание файла таблицы с Yandex-диска
         $handle = curl_init('https://cloud-api.yandex.net/v1/disk/resources/download?path=' .
             urlencode($yandexFilePath));
-        curl_setopt($handle, CURLOPT_HTTPHEADER, array('Authorization: OAuth ' . self::TOKEN));
+        curl_setopt($handle, CURLOPT_HTTPHEADER, array('Authorization: OAuth ' . $accessToken));
         curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($handle, CURLOPT_HEADER, false);
@@ -267,15 +277,21 @@ class YandexSpreadsheet
     /**
      * Загрузка нового файла электронной таблицы на Yandex-диск.
      *
+     * @param $oauthPath - путь к файлу c токеном для доступа к Yandex-диску
      * @param $path - путь к файлу электронной таблицы на сервере
      * @return bool - успешность загрузки файла
      */
-    public function uploadSpreadsheetToYandexDrive($path)
+    public function uploadSpreadsheetToYandexDrive($oauthPath, $path)
     {
+        // Получение токена для доступа к Yandex-диску
+        if (file_exists($oauthPath . $this->tokenFileName))
+            $accessToken = file_get_contents($oauthPath . $this->tokenFileName);
+        else
+            $accessToken = '';
         // Запрашивание URL для загрузки файла
         $handle = curl_init('https://cloud-api.yandex.net/v1/disk/resources/upload?path=' .
             urlencode('/' . $this->newFileName) . '&overwrite=true');
-        curl_setopt($handle, CURLOPT_HTTPHEADER, array('Authorization: OAuth ' . self::TOKEN));
+        curl_setopt($handle, CURLOPT_HTTPHEADER, array('Authorization: OAuth ' . $accessToken));
         curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($handle, CURLOPT_HEADER, false);

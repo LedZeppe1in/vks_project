@@ -87,15 +87,20 @@ class SiteController extends Controller
                 // Содание объекта для работы с Yandex-таблицей
                 $yandexSpreadsheet = new YandexSpreadsheet();
                 // Пусть до папки с учетными данными Google
-                $oauthPath = Yii::$app->basePath . '/web/google-oauth/';
+                $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
                 // Проверка существования файла электронной таблицы на Google-диске
                 $googleResource = $googleSpreadsheet->checkingSpreadsheet(
-                    $oauthPath,
+                    $googleOAuthPath,
                     Yii::$app->session,
                     $cloudDriveModel->googleFileLink
                 );
+                // Пусть до папки с файлом токена для доступа к Yandex-диску
+                $yandexOAuthPath = Yii::$app->basePath . '/web/yandex-oauth/';
                 // Проверка существования файла электронной таблицы на Yandex-диске
-                $yandexResource = $yandexSpreadsheet->checkingSpreadsheet($cloudDriveModel->yandexFilePath);
+                $yandexResource = $yandexSpreadsheet->checkingSpreadsheet(
+                    $yandexOAuthPath,
+                    $cloudDriveModel->yandexFilePath
+                );
                 // Если проверка прошла успешно (файлы существуют)
                 if ($googleResource !== false && $yandexResource !== false) {
                     // Наличие ошибки при проверке
@@ -167,8 +172,11 @@ class SiteController extends Controller
             $dates = $cloudDriveModel->getDates();
             // Копирование Google-таблицы на сервер
             $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer($cloudDriveModel->googleFileLink, $path);
+            // Пусть до папки с файлом токена для доступа к Yandex-диску
+            $yandexOAuthPath = Yii::$app->basePath . '/web/yandex-oauth/';
             // Копирование Yandex-таблицы на сервер
             $copyYandexSuccess = $yandexSpreadsheet->copySpreadsheetByPathToServer(
+                $yandexOAuthPath,
                 $cloudDriveModel->yandexFilePath,
                 $path
             );
@@ -195,7 +203,7 @@ class SiteController extends Controller
                                 $path
                             );
                             // Загрузка нового файла электронной таблицы на Yandex-диск
-                            $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive($path);
+                            $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive($yandexOAuthPath, $path);
                             // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
                             if ($uploadFlag) {
                                 // Формирование массива удаленных строк для вывода на экран
