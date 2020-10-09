@@ -11,8 +11,12 @@ use yii\base\Model;
  */
 class NotificationForm extends Model
 {
-    const SEND_SMS_LINK      = 'http://centrasib.ru/program/smso/1.00/usr_send_sms.php';    // Ссылка отправки сообщений
-    const CHECK_BALANCE_LINK = 'http://centrasib.ru/program/smso/1.00/usr_chk_balance.php'; // Ссылка проверки баланса
+    // Ссылка отправки сообщений
+    const SEND_SMS_LINK             = 'http://centrasib.ru/program/smso/1.00/usr_send_sms.php';
+    // Ссылка проверки баланса
+    const CHECK_BALANCE_LINK        = 'http://centrasib.ru/program/smso/1.00/usr_chk_balance.php';
+    // Ссылка запроса статусов сообщений за определенный период
+    const CHECK_MESSAGE_STATUS_LINK = 'http://centrasib.ru/program/smso/1.00/usr_get_msg_stat_for_period.php';
 
     const LOGIN          = 'vks';         // Имя пользователя
     const PASSWORD       = 'vks';         // Пароль

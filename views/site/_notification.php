@@ -72,6 +72,7 @@ use app\components\GoogleSpreadsheet;
         <?php Pjax::begin(['id' => 'pjaxGrid']); ?>
             <?= GridView::widget([
                 'dataProvider' => $employees,
+                'id' => 'employees-list',
                 'columns' => [
                     ['class' => 'yii\grid\SerialColumn'],
                     [
@@ -105,6 +106,9 @@ use app\components\GoogleSpreadsheet;
                     [
                         'label' => GoogleSpreadsheet::WORK_TYPE_HEADING,
                         'attribute' => '7',
+                    ],
+                    [
+                        'label' => 'Статус',
                     ],
                 ],
             ]); ?>

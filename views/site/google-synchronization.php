@@ -10,7 +10,7 @@ use yii\grid\GridView;
 use app\components\YandexSpreadsheet;
 ?>
 
-<div class="site-index">
+<div class="google-synchronization">
 
     <h1><?= Html::encode($this->title) ?></h1>
 

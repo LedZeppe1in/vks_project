@@ -22,7 +22,8 @@
         "phpoffice/phpspreadsheet": "^1.14",
         "google/apiclient": "^2.7",
         "kartik-v/yii2-widget-datepicker": "dev-master",
-        "kartik-v/yii2-field-range": "*"
+        "kartik-v/yii2-field-range": "*",
+        "kartik-v/yii2-widget-datetimepicker": "*"
     },
     "require-dev": {
         "yiisoft/yii2-debug": "~2.1.0",

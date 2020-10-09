@@ -41,6 +41,16 @@ AppAsset::register($this);
         ],
     ]);
     echo Nav::widget([
+        'options' => ['class' => 'navbar-nav navbar-left'],
+        'encodeLabels' => false,
+        'items' => [
+            Yii::$app->user->isGuest ? '' : [
+                'label' => '<span class="glyphicon glyphicon-ok-circle"></span> Проверка статусов сообщений',
+                'url' => ['/site/check-message-status']
+            ],
+        ],
+    ]);
+    echo Nav::widget([
         'options' => ['class' => 'navbar-nav navbar-right'],
         'items' => [
             Yii::$app->user->isGuest ? '' : (

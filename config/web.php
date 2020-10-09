@@ -34,6 +34,7 @@ $config = [
                 'get-mailing-list' => 'site/get-mailing-list',
                 'save-message-template' => 'site/save-message-template',
                 'notify-employees' => 'site/notify-employees',
+                'check-message-status' => 'site/check-message-status',
             ],
         ],
         'cache' => [

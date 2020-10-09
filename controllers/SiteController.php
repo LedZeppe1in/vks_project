@@ -2,7 +2,9 @@
 
 namespace app\controllers;
 
+use app\models\NotificationResultForm;
 use DateTime;
+use Exception;
 use Yii;
 use yii\web\Response;
 use yii\web\Controller;
@@ -88,12 +90,16 @@ class SiteController extends Controller
                 $yandexSpreadsheet = new YandexSpreadsheet();
                 // Пусть до папки с учетными данными Google
                 $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
-                // Проверка существования файла электронной таблицы на Google-диске
-                $googleResource = $googleSpreadsheet->checkingSpreadsheet(
-                    $googleOAuthPath,
-                    Yii::$app->session,
-                    $cloudDriveModel->googleFileLink
-                );
+                try {
+                    // Проверка существования файла электронной таблицы на Google-диске
+                    $googleResource = $googleSpreadsheet->checkingSpreadsheet(
+                        $googleOAuthPath,
+                        Yii::$app->session,
+                        $cloudDriveModel->googleFileLink
+                    );
+                } catch (Exception $e) {
+                    $googleResource = $e->getMessage();
+                }
                 // Пусть до папки с файлом токена для доступа к Yandex-диску
                 $yandexOAuthPath = Yii::$app->basePath . '/web/yandex-oauth/';
                 // Проверка существования файла электронной таблицы на Yandex-диске
@@ -162,6 +168,8 @@ class SiteController extends Controller
                 'pageSize' => 10000,
             ],
         ]);
+        // Формирование модели (формы) NotificationResultForm
+        $notificationResultModel = new NotificationResultForm();
         // Содание объекта для работы с Google-таблицей
         $googleSpreadsheet = new GoogleSpreadsheet();
         // Содание объекта для работы с Yandex-таблицей
@@ -375,6 +383,7 @@ class SiteController extends Controller
             'cloudDriveModel' => $cloudDriveModel,
             'notificationModel' => $notificationModel,
             'employees' => $employees,
+            'notificationResultModel' => $notificationResultModel,
         ]);
     }
 
@@ -543,6 +552,7 @@ class SiteController extends Controller
                 $data['success'] = true;
                 // Получение списка сотрудников для оповещения
                 $employees = json_decode(Yii::$app->request->post('employees'));
+                $i = 0;
                 // Обход всех сотрудников из списка оповещения
                 foreach ($employees as $employee) {
                     // Массив поисковых маркеров в тексте
@@ -569,7 +579,7 @@ class SiteController extends Controller
                         'status' => NotificationForm::SENDING_STATUS,
                         'txt' => iconv('UTF-8', 'CP1251', $message),
                         'smscnt' => 2,
-                        'to' => '89148840743', //$employee[2] // реальный номер телефона сотрудника
+                        'to' => '89501049945',//'89148840743', //$employee[2] // реальный номер телефона сотрудника
                         'sign' => NotificationForm::SIGN
                     );
                     // Отправка POST-запроса СМС-Органайзеру для отправки сообщений
@@ -582,6 +592,8 @@ class SiteController extends Controller
                     curl_close ($handle);
                     // Формирование результата отправки для текущего сотрудника
                     array_push($serverOutputs, $serverOutput);
+                    if ($i > 0) break;
+                    $i++;
                 }
                 // Формирование результата отправки для всех сотрудников
                 $data['smsoResponse'] = $serverOutputs;
@@ -646,6 +658,72 @@ class SiteController extends Controller
         }
 
         return false;
+    }
+
+    /**
+     * Получение статусов сообщений за определенный период.
+     *
+     * @return string
+     * @throws Exception
+     */
+    public function actionCheckMessageStatus()
+    {
+        $model = new NotificationResultForm();
+        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            // Формирование параметров для POST-запроса к СМС-Органайзеру
+            $parameters = array(
+                'login' => NotificationForm::LOGIN,
+                'passwd' => NotificationForm::PASSWORD,
+                'date_start' => date('Y-m-d H:i:s', strtotime($model->fromDateTime)),
+                'date_end' => date('Y-m-d H:i:s', strtotime($model->toDateTime))
+            );
+            // Отправка POST-запроса СМС-Органайзеру для проверки статусов сообщений
+            $handle = curl_init();
+            curl_setopt($handle, CURLOPT_URL, NotificationForm::CHECK_MESSAGE_STATUS_LINK);
+            curl_setopt($handle, CURLOPT_POST, 1);
+            curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
+            curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($handle);
+            curl_close($handle);
+            // Формирование массива для GridView из ответа
+            $allValues = array();
+            $responseArray = explode('^', $response);
+            foreach ($responseArray as $item) {
+                if (!empty($item)) {
+                    $currentValues = array();
+                    $parts = explode('~', $item);
+                    foreach ($parts as $key => $part) {
+                        $values = explode('=', $part);
+                        if (isset($values[1])) {
+                            $strReplace = str_replace('++', ' ', $values[1]);
+                            if ($key == 2) {
+                                $dateTime = new DateTime($strReplace);
+                                array_push($currentValues, $dateTime->format('d.m.Y H:i'));
+                            } else
+                                array_push($currentValues, $strReplace);
+                        }
+                    }
+                    array_push($allValues, $currentValues);
+                }
+            }
+            $dataProvider = new ArrayDataProvider([
+                'allModels' => $allValues,
+                'pagination' => [
+                    'pageSize' => 10000,
+                ],
+            ]);
+
+            // Сообщение об успешной проверке статусов сообщений
+            Yii::$app->getSession()->setFlash('success', 'Вы успешно проверили статусы сообщений!');
+
+            return $this->render('notification-result', [
+                'dataProvider' => $dataProvider
+            ]);
+        }
+
+        return $this->render('check-message-status', [
+            'model' => $model,
+        ]);
     }
 
     /**

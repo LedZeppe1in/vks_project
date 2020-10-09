@@ -126,6 +126,8 @@ use yii\bootstrap\Tabs;
                             // Скрытие индикатора прогресса
                             $("#overlay").hide();
                             spinner.stop(target);
+                            //
+                            console.log(data["googleResource"]);
                         } else {
                             // Активация слоя с сообщением об ошибке проверки таблиц
                             checkingErrorMessage.style.display = "block";
@@ -321,7 +323,7 @@ use yii\bootstrap\Tabs;
         });
 
         // Обработка после выполнения pjax
-        $(document).on('ready pjax:success', function() {
+        $(document).on("ready pjax:success", function() {
             // Активация слоя с сообщением об успешном формировании списка сотрудников для оповещения
             employeesSuccessMessage.style.display = "block";
             // Деативация всех остальных слоев с сообщениями
@@ -408,6 +410,11 @@ use yii\bootstrap\Tabs;
                             currentBalanceTitle.innerHTML = data["balance"];
                         else
                             currentBalanceTitle.innerHTML = "не удалось проверить баланс";
+                        // Изменение статусов
+                        $("#employees-list table tr").each(function () {
+                            let cell = $(this).find("td:last-of-type");
+                            cell.html("Отправлено");
+                        });
                         // Скрытие индикатора прогресса
                         $("#overlay").hide();
                         spinner.stop(target);

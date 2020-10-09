@@ -11,7 +11,7 @@ use yii\grid\GridView;
 use app\components\YandexSpreadsheet;
 ?>
 
-<div class="site-index">
+<div class="yandex-synchronization">
 
     <h1><?= Html::encode($this->title) ?></h1>
 
