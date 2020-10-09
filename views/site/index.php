@@ -19,7 +19,7 @@ use yii\bootstrap\Tabs;
     // Выполнение скрипта при загрузке страницы
     $(document).ready(function() {
         // Обработка появления индикатора прогресса
-        let target = document.getElementById('center');
+        let target = document.getElementById("center");
         let spinner = new Spinner(spinner_options).spin();
         $("button.btn-primary").click(function() {
             $("#overlay").show();
@@ -28,6 +28,15 @@ use yii\bootstrap\Tabs;
         $("button.btn-success").click(function() {
             $("#overlay").show();
             spinner.spin(target);
+        });
+        // Обработка события после валидации формы
+        $("#cloud-drive-form").on("afterValidate", function (e, m, attr) {
+            e.preventDefault();
+            if(attr.length > 0) {
+                // Скрытие индикатора прогресса
+                $("#overlay").hide();
+                spinner.stop(target);
+            }
         });
 
         // Сообщение об успешной проверке таблиц

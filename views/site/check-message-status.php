@@ -14,11 +14,20 @@ use kartik\datetime\DateTimePicker;
     // Выполнение скрипта при загрузке страницы
     $(document).ready(function() {
         // Обработка появления индикатора прогресса
-        let target = document.getElementById('center');
+        let target = document.getElementById("center");
         let spinner = new Spinner(spinner_options).spin();
         $("button.btn-success").click(function() {
             $("#overlay").show();
             spinner.spin(target);
+        });
+        // Обработка события после валидации формы
+        $("#notification-result-form").on("afterValidate", function (e, m, attr) {
+            e.preventDefault();
+            if(attr.length > 0) {
+                // Скрытие индикатора прогресса
+                $("#overlay").hide();
+                spinner.stop(target);
+            }
         });
     });
 </script>
