@@ -279,9 +279,10 @@ class YandexSpreadsheet
      *
      * @param $oauthPath - путь к файлу c токеном для доступа к Yandex-диску
      * @param $path - путь к файлу электронной таблицы на сервере
+     * @param $fileName - путь к файлу электронной таблицы на Yandex-диске для записи
      * @return bool - успешность загрузки файла
      */
-    public function uploadSpreadsheetToYandexDrive($oauthPath, $path)
+    public function uploadSpreadsheetToYandexDrive($oauthPath, $path, $fileName)
     {
         // Получение токена для доступа к Yandex-диску
         if (file_exists($oauthPath . $this->tokenFileName))
@@ -290,7 +291,7 @@ class YandexSpreadsheet
             $accessToken = '';
         // Запрашивание URL для загрузки файла
         $handle = curl_init('https://cloud-api.yandex.net/v1/disk/resources/upload?path=' .
-            urlencode('/' . $this->newFileName) . '&overwrite=true');
+            urlencode($fileName) . '&overwrite=true');
         curl_setopt($handle, CURLOPT_HTTPHEADER, array('Authorization: OAuth ' . $accessToken));
         curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);

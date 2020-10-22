@@ -90,16 +90,12 @@ class SiteController extends Controller
                 $yandexSpreadsheet = new YandexSpreadsheet();
                 // Пусть до папки с учетными данными Google
                 $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
-                try {
-                    // Проверка существования файла электронной таблицы на Google-диске
-                    $googleResource = $googleSpreadsheet->checkingSpreadsheet(
-                        $googleOAuthPath,
-                        Yii::$app->session,
-                        $cloudDriveModel->googleFileLink
-                    );
-                } catch (Exception $e) {
-                    $googleResource = $e->getMessage();
-                }
+                // Проверка существования файла электронной таблицы на Google-диске
+                $googleResource = $googleSpreadsheet->checkingSpreadsheet(
+                    $googleOAuthPath,
+                    Yii::$app->session,
+                    $cloudDriveModel->googleFileLink
+                );
                 // Пусть до папки с файлом токена для доступа к Yandex-диску
                 $yandexOAuthPath = Yii::$app->basePath . '/web/yandex-oauth/';
                 // Проверка существования файла электронной таблицы на Yandex-диске
@@ -210,8 +206,13 @@ class SiteController extends Controller
                                 $yandexSpreadsheetDeletedRows,
                                 $path
                             );
+                            // Определение имени файла электронной таблицы на Yandex-диске для записи результатов
+                            if ($cloudDriveModel->overwriteMark)
+                                $fileName = $cloudDriveModel->yandexFilePath;
+                            else
+                                $fileName = '/' . $yandexSpreadsheet->newFileName;
                             // Загрузка нового файла электронной таблицы на Yandex-диск
-                            $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive($yandexOAuthPath, $path);
+                            $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive($yandexOAuthPath, $path, $fileName);
                             // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
                             if ($uploadFlag) {
                                 // Формирование массива удаленных строк для вывода на экран
@@ -288,11 +289,18 @@ class SiteController extends Controller
                             $googleSpreadsheet->writeSpreadsheet($yandexSpreadsheetRows, $path);
                             // Пусть до папки с учетными данными Google
                             $oauthPath = Yii::$app->basePath . '/web/google-oauth/';
+                            // Определение имени файла электронной таблицы на Google-диске для записи результатов
+                            if ($cloudDriveModel->overwriteMark)
+                                // Получение id файла по публичной ссылке на файл электронной таблицы на Google-диске
+                                $fileId = GoogleSpreadsheet::getFileID($cloudDriveModel->googleFileLink);
+                            else
+                                $fileId = null;
                             // Загрузка нового файла электронной таблицы на Google-диск
                             $uploadFlag = $googleSpreadsheet->uploadSpreadsheetToGoogleDrive(
                                 $oauthPath,
                                 Yii::$app->session,
-                                $path
+                                $path,
+                                $fileId
                             );
                             // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
                             if ($uploadFlag) {
@@ -552,7 +560,6 @@ class SiteController extends Controller
                 $data['success'] = true;
                 // Получение списка сотрудников для оповещения
                 $employees = json_decode(Yii::$app->request->post('employees'));
-                $i = 0;
                 // Обход всех сотрудников из списка оповещения
                 foreach ($employees as $employee) {
                     // Массив поисковых маркеров в тексте
@@ -579,7 +586,7 @@ class SiteController extends Controller
                         'status' => NotificationForm::SENDING_STATUS,
                         'txt' => iconv('UTF-8', 'CP1251', $message),
                         'smscnt' => 2,
-                        'to' => '89501049945',//'89148840743', //$employee[2] // реальный номер телефона сотрудника
+                        'to' => $employee[2], // реальный номер телефона сотрудника
                         'sign' => NotificationForm::SIGN
                     );
                     // Отправка POST-запроса СМС-Органайзеру для отправки сообщений
@@ -592,8 +599,6 @@ class SiteController extends Controller
                     curl_close ($handle);
                     // Формирование результата отправки для текущего сотрудника
                     array_push($serverOutputs, $serverOutput);
-                    if ($i > 0) break;
-                    $i++;
                 }
                 // Формирование результата отправки для всех сотрудников
                 $data['smsoResponse'] = $serverOutputs;

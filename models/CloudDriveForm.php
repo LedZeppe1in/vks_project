@@ -30,6 +30,7 @@ class CloudDriveForm extends Model
     public $yandexFilePath; // Путь к файлу Yandex-таблицы
     public $fromDate;       // Дата начала для выборки
     public $toDate;         // Дата окончания для выборки
+    public $overwriteMark;  // Метка перезаписи файла электронной таблицы на облачных дисках
 
     /**
      * @return array the validation rules.
@@ -40,6 +41,7 @@ class CloudDriveForm extends Model
             [['googleFileLink', 'yandexFilePath'], 'required'],
             [['googleFileLink', 'yandexFilePath'], 'string'],
             [['fromDate', 'toDate'], 'date', 'format' => 'php:d.m.Y'],
+            ['overwriteMark', 'safe']
         ];
     }
 
@@ -53,6 +55,7 @@ class CloudDriveForm extends Model
             'yandexFilePath' => 'Путь к файлу электронной таблице на Yandex-диске',
             'fromDate' => 'Дата начала',
             'toDate' => 'Дата окончания',
+            'overwriteMark' => 'Перезапись файла на диске'
         ];
     }
 

@@ -111,10 +111,11 @@ class GoogleSpreadsheet
      * @param $oauthPath - путь к файлам авторизации (учетным данным и токену) для Google Drive API
      * @param $session - текущая сессия пользователя
      * @param $filePath - путь к файлу электронной таблицы на сервере
+     * @param $fileId - id файла электронной таблицы на Google-диске
      * @return bool - успешность загрузки файла
      * @throws \Google_Exception
      */
-    function uploadSpreadsheetToGoogleDrive($oauthPath, $session, $filePath)
+    function uploadSpreadsheetToGoogleDrive($oauthPath, $session, $filePath, $fileId)
     {
         $client = new Google_Client();
         $client->setAuthConfig($oauthPath . $this->oauthCredentials);
@@ -140,24 +141,38 @@ class GoogleSpreadsheet
         if ($client->getAccessToken()) {
             $drive = new Google_Service_Drive($client);
             $fileList = $drive->files->listFiles();
-            $flag = false;
-            foreach ($fileList['files'] as $file)
-                if ($file['name'] == $this->newFileName) {
-                    $emptyFile = new Google_Service_Drive_DriveFile();
-                    $drive->files->update($file['id'], $emptyFile, array(
-                        'data' => file_get_contents($filePath . $this->newFileName),
-                        'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                        'uploadType' => 'multipart'
-                    ));
-                    $flag = true;
+            // Если передан id файла электронной таблицы на Google-диске, то меняется содержимое этого файла
+            if ($fileId != null) {
+                foreach ($fileList['files'] as $file)
+                    if ($file['id'] == $fileId) {
+                        $emptyFile = new Google_Service_Drive_DriveFile();
+                        $drive->files->update($file['id'], $emptyFile, array(
+                            'data' => file_get_contents($filePath . $this->newFileName),
+                            'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            'uploadType' => 'multipart'
+                        ));
+                    }
+            } else {
+                // Если id файла электронной таблицы на Google-диске не передан, то создание нового файла
+                $flag = false;
+                foreach ($fileList['files'] as $file)
+                    if ($file['name'] == $this->newFileName) {
+                        $emptyFile = new Google_Service_Drive_DriveFile();
+                        $drive->files->update($file['id'], $emptyFile, array(
+                            'data' => file_get_contents($filePath . $this->newFileName),
+                            'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            'uploadType' => 'multipart'
+                        ));
+                        $flag = true;
+                    }
+                if (!$flag) {
+                    // Копирование в корень Google-диска нового файла электронной таблицы
+                    $fileArray = array('data' => file_get_contents($filePath . $this->newFileName),
+                        'mimeType' => 'application/octet-stream', 'uploadType' => 'multipart');
+                    $file = new Google_Service_Drive_DriveFile();
+                    $file->setName($this->newFileName);
+                    $drive->files->create($file, $fileArray);
                 }
-            if (!$flag) {
-                // Копирование в корень Google-диска файл электронной таблицы
-                $fileArray = array('data' => file_get_contents($filePath . $this->newFileName),
-                    'mimeType' => 'application/octet-stream', 'uploadType' => 'multipart');
-                $file = new Google_Service_Drive_DriveFile();
-                $file->setName($this->newFileName);
-                $drive->files->create($file, $fileArray);
             }
 
             return true;
