@@ -5,12 +5,8 @@ namespace app\components;
 use Exception;
 use Google_Client;
 use Google_Service_Drive;
-use Google_Service_Drive_DriveFile;
 use Google_Service_Sheets;
-use Google_Service_Sheets_Request;
 use Google_Service_Sheets_ValueRange;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
 
 /**
