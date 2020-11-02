@@ -92,8 +92,6 @@ use kartik\form\ActiveForm;
                 Если Вы хотите использовать даты для выборки определенных строк, то введите обе даты.
             </span>
 
-            <?= $form->field($cloudDriveModel, 'overwriteMark')->checkbox(['checked' => true]) ?>
-
             <div class="form-group">
                 <?= Button::widget([
                     'label' => '<span class="glyphicon glyphicon-check"></span> Проверить',

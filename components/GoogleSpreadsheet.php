@@ -6,6 +6,9 @@ use Exception;
 use Google_Client;
 use Google_Service_Drive;
 use Google_Service_Drive_DriveFile;
+use Google_Service_Sheets;
+use Google_Service_Sheets_Request;
+use Google_Service_Sheets_ValueRange;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
@@ -49,8 +52,10 @@ class GoogleSpreadsheet
      */
     public static function getFileID($fileLink)
     {
-        $needle1 = 'https://drive.google.com/file/d/';
-        $needle2 = '/view?usp=sharing';
+        //$needle1 = 'https://drive.google.com/file/d/';
+        //$needle2 = '/view?usp=sharing';
+        $needle1 = 'https://docs.google.com/spreadsheets/d/';
+        $needle2 = '/edit?usp=sharing';
         $str = str_replace($needle1, '', $fileLink);
         $fileId = str_replace($needle2, '', $str);
 
@@ -106,16 +111,16 @@ class GoogleSpreadsheet
     }
 
     /**
-     * Загрузка нового файла электронной таблицы на Google-диск.
+     * Запись новых данных в файл электронной таблицы на Google-диск.
      *
      * @param $oauthPath - путь к файлам авторизации (учетным данным и токену) для Google Drive API
      * @param $session - текущая сессия пользователя
-     * @param $filePath - путь к файлу электронной таблицы на сервере
      * @param $fileId - id файла электронной таблицы на Google-диске
+     * @param $yandexSpreadsheetRows - массив найденных строк с табельными номерами из Yandex-таблицы для обновления
      * @return bool - успешность загрузки файла
      * @throws \Google_Exception
      */
-    function uploadSpreadsheetToGoogleDrive($oauthPath, $session, $filePath, $fileId)
+    function writeSpreadsheetDataToGoogleDrive($oauthPath, $session, $fileId, $yandexSpreadsheetRows)
     {
         $client = new Google_Client();
         $client->setAuthConfig($oauthPath . $this->oauthCredentials);
@@ -139,39 +144,19 @@ class GoogleSpreadsheet
         $client->setAccessToken($session->get('upload_token'));
         // Если токен установлен
         if ($client->getAccessToken()) {
-            $drive = new Google_Service_Drive($client);
-            $fileList = $drive->files->listFiles();
-            // Если передан id файла электронной таблицы на Google-диске, то меняется содержимое этого файла
-            if ($fileId != null) {
-                foreach ($fileList['files'] as $file)
-                    if ($file['id'] == $fileId) {
-                        $emptyFile = new Google_Service_Drive_DriveFile();
-                        $drive->files->update($file['id'], $emptyFile, array(
-                            'data' => file_get_contents($filePath . $this->newFileName),
-                            'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                            'uploadType' => 'multipart'
-                        ));
-                    }
-            } else {
-                // Если id файла электронной таблицы на Google-диске не передан, то создание нового файла
-                $flag = false;
-                foreach ($fileList['files'] as $file)
-                    if ($file['name'] == $this->newFileName) {
-                        $emptyFile = new Google_Service_Drive_DriveFile();
-                        $drive->files->update($file['id'], $emptyFile, array(
-                            'data' => file_get_contents($filePath . $this->newFileName),
-                            'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                            'uploadType' => 'multipart'
-                        ));
-                        $flag = true;
-                    }
-                if (!$flag) {
-                    // Копирование в корень Google-диска нового файла электронной таблицы
-                    $fileArray = array('data' => file_get_contents($filePath . $this->newFileName),
-                        'mimeType' => 'application/octet-stream', 'uploadType' => 'multipart');
-                    $file = new Google_Service_Drive_DriveFile();
-                    $file->setName($this->newFileName);
-                    $drive->files->create($file, $fileArray);
+            // Если передан id файла электронной таблицы на Google-диске и
+            // массив с найденными строками в Yandex-таблице не пустой
+            if ($fileId != null && !empty($yandexSpreadsheetRows)) {
+                $service = new Google_Service_Sheets($client);
+                // Обновление строк в Google-таблице (подстановка табельных номеров)
+                foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {
+                    $body = new Google_Service_Sheets_ValueRange(['values' => [[$yandexSpreadsheetRow[6]]]]);
+                    $service->spreadsheets_values->update(
+                        $fileId,
+                        self::REQUESTS_SHEET . '!K' . $googleSpreadsheetKey,
+                        $body,
+                        ['valueInputOption' => 'RAW']
+                    );
                 }
             }
 
@@ -329,12 +314,17 @@ class GoogleSpreadsheet
                             // Проверка совпадания строки из Yandex-таблицы
                             $equality = false;
                             foreach ($yandexSpreadsheetRows as $yandexSpreadsheetRow)
-                                if ($yandexSpreadsheetRow[0] == $googleSpreadsheetRow[0] &&
-                                    $yandexSpreadsheetRow[1] == $googleSpreadsheetRow[1] &&
-                                    $yandexSpreadsheetRow[2] == $googleSpreadsheetRow[2] &&
-                                    $yandexSpreadsheetRow[3] == $googleSpreadsheetRow[3] &&
-                                    $yandexSpreadsheetRow[4] == $googleSpreadsheetRow[4])
-                                    $equality = true;
+                                if (isset($yandexSpreadsheetRow[0]) && isset($googleSpreadsheetRow[0]) &&
+                                    isset($yandexSpreadsheetRow[1]) && isset($googleSpreadsheetRow[1]) &&
+                                    isset($yandexSpreadsheetRow[2]) && isset($googleSpreadsheetRow[2]) &&
+                                    isset($yandexSpreadsheetRow[3]) && isset($googleSpreadsheetRow[3]) &&
+                                    isset($yandexSpreadsheetRow[4]) && isset($googleSpreadsheetRow[4]))
+                                    if ($yandexSpreadsheetRow[0] == $googleSpreadsheetRow[0] &&
+                                        $yandexSpreadsheetRow[1] == $googleSpreadsheetRow[1] &&
+                                        $yandexSpreadsheetRow[2] == $googleSpreadsheetRow[2] &&
+                                        $yandexSpreadsheetRow[3] == $googleSpreadsheetRow[3] &&
+                                        $yandexSpreadsheetRow[4] == $googleSpreadsheetRow[4])
+                                        $equality = true;
                             // Если совпадения нет, то добавление текущей строки в массив
                             if ($equality == false)
                                 array_push($googleSpreadsheetRows, $googleSpreadsheetRow);
@@ -345,42 +335,18 @@ class GoogleSpreadsheet
         $reader->close();
         // Формирование массива с номерами строк из Yandex-таблицы, которые необходимо удалить
         foreach ($yandexSpreadsheetRows as $yKey => $yRow)
-            if ($yRow[0] != null && $yRow[1] != null && $yRow[2] != null && $yRow[3] != null && $yRow[4] != null) {
-                $equality = false;
-                foreach ($allGoogleSpreadsheetRows as $gRow)
-                    if ($yRow[0] == $gRow[0] && $yRow[1] == $gRow[1] && $yRow[2] == $gRow[2]
-                        && $yRow[3] == $gRow[3] && $yRow[4] == $gRow[4])
-                        $equality = true;
-                if ($equality == false)
-                    array_push($yandexSpreadsheetDeletedRows, $yKey);
-            }
+            if (isset($yRow[0]) && isset($yRow[1]) && isset($yRow[2]) && isset($yRow[2]) && isset($yRow[4]))
+                if ($yRow[0] != null && $yRow[1] != null && $yRow[2] != null && $yRow[3] != null && $yRow[4] != null) {
+                    $equality = false;
+                    foreach ($allGoogleSpreadsheetRows as $gRow)
+                        if ($yRow[0] == $gRow[0] && $yRow[1] == $gRow[1] && $yRow[2] == $gRow[2]
+                            && $yRow[3] == $gRow[3] && $yRow[4] == $gRow[4])
+                            $equality = true;
+                    if ($equality == false)
+                        array_push($yandexSpreadsheetDeletedRows, $yKey);
+                }
 
         return array($googleSpreadsheetRows, $yandexSpreadsheetDeletedRows);
-    }
-
-    /**
-     * Запись обновленной электронной таблицы в файл.
-     *
-     * @param $yandexSpreadsheetRows - массив найденных строк с табельными номерами из Yandex-таблицы для обновления
-     * @param $path - путь к файлу электронной таблицы на сервере
-     * @throws \PhpOffice\PhpSpreadsheet\Exception
-     * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
-     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
-     */
-    public function writeSpreadsheet($yandexSpreadsheetRows, $path)
-    {
-        // Чтение Google-таблицы
-        $reader = IOFactory::createReader("Xlsx");
-        $spreadsheet = $reader->load($path . $this->fileName);
-        $worksheet = $spreadsheet->setActiveSheetIndexByName(self::REQUESTS_SHEET);
-        // Если массив с найденными строками в Yandex-таблице не пустой
-        if (!empty($yandexSpreadsheetRows))
-            // Обновление строк в Google-таблице (подстановка табельных номеров)
-            foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow)
-                $worksheet->setCellValue('K' . $googleSpreadsheetKey, $yandexSpreadsheetRow[6]);
-        // Обновление файла Google-таблицы
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($path . $this->newFileName);
     }
 
     /**

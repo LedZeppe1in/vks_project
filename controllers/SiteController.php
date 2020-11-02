@@ -206,13 +206,12 @@ class SiteController extends Controller
                                 $yandexSpreadsheetDeletedRows,
                                 $path
                             );
-                            // Определение имени файла электронной таблицы на Yandex-диске для записи результатов
-                            if ($cloudDriveModel->overwriteMark)
-                                $fileName = $cloudDriveModel->yandexFilePath;
-                            else
-                                $fileName = '/' . $yandexSpreadsheet->newFileName;
                             // Загрузка нового файла электронной таблицы на Yandex-диск
-                            $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive($yandexOAuthPath, $path, $fileName);
+                            $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive(
+                                $yandexOAuthPath,
+                                $path,
+                                $cloudDriveModel->yandexFilePath
+                            );
                             // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
                             if ($uploadFlag) {
                                 // Формирование массива удаленных строк для вывода на экран
@@ -285,24 +284,18 @@ class SiteController extends Controller
                         );
                         // Если есть обновленные строки с табельными номерами из Yandex-таблицы
                         if (!empty($yandexSpreadsheetRows)) {
-                            // Запись нового файла электронной таблицы с обновленными табельными номерами
-                            $googleSpreadsheet->writeSpreadsheet($yandexSpreadsheetRows, $path);
                             // Пусть до папки с учетными данными Google
                             $oauthPath = Yii::$app->basePath . '/web/google-oauth/';
-                            // Определение имени файла электронной таблицы на Google-диске для записи результатов
-                            if ($cloudDriveModel->overwriteMark)
-                                // Получение id файла по публичной ссылке на файл электронной таблицы на Google-диске
-                                $fileId = GoogleSpreadsheet::getFileID($cloudDriveModel->googleFileLink);
-                            else
-                                $fileId = null;
-                            // Загрузка нового файла электронной таблицы на Google-диск
-                            $uploadFlag = $googleSpreadsheet->uploadSpreadsheetToGoogleDrive(
+                            // Получение id файла по публичной ссылке на файл электронной таблицы на Google-диске
+                            $fileId = GoogleSpreadsheet::getFileID($cloudDriveModel->googleFileLink);
+                            // Запись новых данных в файла электронной таблицы на Google-диск
+                            $uploadFlag = $googleSpreadsheet->writeSpreadsheetDataToGoogleDrive(
                                 $oauthPath,
                                 Yii::$app->session,
-                                $path,
-                                $fileId
+                                $fileId,
+                                $yandexSpreadsheetRows
                             );
-                            // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
+                            // Если нет ошибки при записи электронной таблицы на Google-диск
                             if ($uploadFlag) {
                                 // Формирование массива добавленных строк для вывода на экран
                                 $yandexArray = array();

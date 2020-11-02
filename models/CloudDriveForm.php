@@ -14,23 +14,15 @@ use yii\base\Model;
  */
 class CloudDriveForm extends Model
 {
-    // Название файла для хранения электронной таблицы на Google-диске
+    // Название файла для хранения ссылки на электронную таблицу на Google-диске
     const GOOGLE_SPREADSHEET_FILE_NAME = 'google-spreadsheet-path.txt';
-    // Данные для подключения к аккаунту Google
-    const GOOGLE_LOGIN     = 'centrasib@gmail.com';
-    const GOOGLE_PASSWORD  = 'cnhjxrf1';
-
-    // Название файла для хранения электронной таблицы на Yandex-диске
+    // Название файла для хранения пути к электронной таблице на Yandex-диске
     const YANDEX_SPREADSHEET_FILE_NAME = 'yandex-spreadsheet-path.txt';
-    // Данные для подключения к аккаунту Yandex
-    const YANDEX_LOGIN     = 'info@centrasib.ru';
-    const YANDEX_PASSWORD  = 'cnhjxrf1';
 
     public $googleFileLink; // Ссылка на файл Google-таблицы
     public $yandexFilePath; // Путь к файлу Yandex-таблицы
     public $fromDate;       // Дата начала для выборки
     public $toDate;         // Дата окончания для выборки
-    public $overwriteMark;  // Метка перезаписи файла электронной таблицы на облачных дисках
 
     /**
      * @return array the validation rules.
@@ -40,8 +32,7 @@ class CloudDriveForm extends Model
         return [
             [['googleFileLink', 'yandexFilePath'], 'required'],
             [['googleFileLink', 'yandexFilePath'], 'string'],
-            [['fromDate', 'toDate'], 'date', 'format' => 'php:d.m.Y'],
-            ['overwriteMark', 'safe']
+            [['fromDate', 'toDate'], 'date', 'format' => 'php:d.m.Y']
         ];
     }
 
@@ -54,8 +45,7 @@ class CloudDriveForm extends Model
             'googleFileLink' => 'Ссылка на файл электронной таблицы на Google Sheets',
             'yandexFilePath' => 'Путь к файлу электронной таблице на Yandex-диске',
             'fromDate' => 'Дата начала',
-            'toDate' => 'Дата окончания',
-            'overwriteMark' => 'Перезапись файла на диске'
+            'toDate' => 'Дата окончания'
         ];
     }
 
