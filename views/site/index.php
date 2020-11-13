@@ -31,7 +31,7 @@ use yii\helpers\Html;
             деятельности информационные технологии:
             <ul>
                 <li><?= Html::a('облачные сервисы и хранилища', 'https://drive.google.com') ?>;</li>
-                <li><?= Html::a('СМС информирование', 'http://sms.centrasib.ru') ?>.</li>
+                <li><?= Html::a('СМС информирование', 'http://mysms.centrasib.ru') ?>.</li>
             </ul>
         </h4>
         <h3><b>Карточка предприятия:</b></h3>
