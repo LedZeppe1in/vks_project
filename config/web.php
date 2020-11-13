@@ -35,6 +35,7 @@ $config = [
                 'save-message-template' => 'site/save-message-template',
                 'notify-employees' => 'site/notify-employees',
                 'check-message-status' => 'site/check-message-status',
+                'data-synchronization' => 'site/data-synchronization',
             ],
         ],
         'cache' => [

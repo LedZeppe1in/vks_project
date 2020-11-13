@@ -35,7 +35,7 @@ AppAsset::register($this);
     <?php
     NavBar::begin([
         'brandLabel' => Yii::$app->name,
-        'brandUrl' => Yii::$app->user->isGuest ? '/site/login' : Yii::$app->homeUrl,
+        'brandUrl' => Yii::$app->homeUrl,
         'options' => [
             'class' => 'navbar-inverse navbar-fixed-top',
         ],
@@ -45,6 +45,10 @@ AppAsset::register($this);
         'encodeLabels' => false,
         'items' => [
             Yii::$app->user->isGuest ? '' : [
+                'label' => '<span class="glyphicon glyphicon-refresh"></span> Синхронизация данных',
+                'url' => ['/site/data-synchronization']
+            ],
+            Yii::$app->user->isGuest ? '' : [
                 'label' => '<span class="glyphicon glyphicon-ok-circle"></span> Проверка статусов сообщений',
                 'url' => ['/site/check-message-status']
             ],
@@ -52,8 +56,12 @@ AppAsset::register($this);
     ]);
     echo Nav::widget([
         'options' => ['class' => 'navbar-nav navbar-right'],
+        'encodeLabels' => false,
         'items' => [
-            Yii::$app->user->isGuest ? '' : (
+            Yii::$app->user->isGuest ? [
+                'label' => '<span class="glyphicon glyphicon-log-in"></span> Вход',
+                'url' => ['/site/login']
+            ] : (
                 '<li>'
                 . Html::beginForm(['/site/logout'], 'post')
                 . Html::submitButton(
@@ -79,8 +87,9 @@ AppAsset::register($this);
 
 <footer class="footer">
     <div class="container">
-        <p class="pull-left"> &copy; <?= date('Y') ?> ООО "ВКС"</p>
-        <p class="pull-right">Разработано ООО "ЦентраСиб"</p>
+        <p class="pull-left"> &copy; <?= date('Y') ?>
+            <?= Html::a('ООО "ВКС"', 'http://koopwork.ru/o-kompanii/') ?></p>
+        <p class="pull-right">Разработано <?= Html::a('ООО "ЦентраСиб"', 'http://centrasib.ru') ?></p>
     </div>
 </footer>
 

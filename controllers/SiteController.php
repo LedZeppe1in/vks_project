@@ -29,10 +29,10 @@ class SiteController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::className(),
-                'only' => ['index', 'logout', 'contact'],
+                'only' => ['logout', 'contact'],
                 'rules' => [
                     [
-                        'actions' => ['index', 'logout', 'contact'],
+                        'actions' => ['logout', 'contact'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -61,6 +61,16 @@ class SiteController extends Controller
                 'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
             ],
         ];
+    }
+
+    /**
+     * Главная страница сайта.
+     *
+     * @return string
+     */
+    public function actionIndex()
+    {
+        return $this->render('index');
     }
 
     /**
@@ -126,7 +136,7 @@ class SiteController extends Controller
     }
 
     /**
-     * Главная страница сайта - синхронизация таблиц.
+     * Страница синхронизации табличных данных.
      *
      * @return string
      * @throws \Box\Spout\Common\Exception\IOException
@@ -137,7 +147,7 @@ class SiteController extends Controller
      * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
      * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
      */
-    public function actionIndex()
+    public function actionDataSynchronization()
     {
         // Пусть до папки с таблицами
         $path = Yii::$app->basePath . '/web/spreadsheets/';
@@ -380,7 +390,7 @@ class SiteController extends Controller
             }
         }
 
-        return $this->render('index', [
+        return $this->render('data-synchronization', [
             'cloudDriveModel' => $cloudDriveModel,
             'notificationModel' => $notificationModel,
             'employees' => $employees,
