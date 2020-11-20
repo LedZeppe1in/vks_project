@@ -4,6 +4,8 @@ namespace app\models;
 
 class User extends \yii\base\BaseObject implements \yii\web\IdentityInterface
 {
+    const CHECK_USER = 'http://centrasib.ru/program/smso/1.00/usr_get_oauth.php';
+
     public $id;
     public $username;
     public $password;

@@ -11,6 +11,7 @@ use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
 use yii\bootstrap\ActiveForm;
 use yii\data\ArrayDataProvider;
+use app\models\User;
 use app\models\LoginForm;
 use app\models\ContactForm;
 use app\models\CloudDriveForm;
@@ -29,10 +30,10 @@ class SiteController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::className(),
-                'only' => ['logout', 'contact'],
+                'only' => ['logout', 'contact', 'data-synchronization', 'check-message-status'],
                 'rules' => [
                     [
-                        'actions' => ['logout', 'contact'],
+                        'actions' => ['logout', 'contact', 'data-synchronization', 'check-message-status'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -744,12 +745,22 @@ class SiteController extends Controller
         if (!Yii::$app->user->isGuest) {
             return $this->goHome();
         }
-
         $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
+        if ($model->load(Yii::$app->request->post())) {
+            $parameters = array(
+                'login' => $model->username,
+                'passwd' => $model->password,
+            );
+            $handle = curl_init();
+            curl_setopt($handle, CURLOPT_URL, User::CHECK_USER);
+            curl_setopt($handle, CURLOPT_POST, 1);
+            curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
+            curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($handle);
+            curl_close($handle);
+            if ($response) $model->login();
             return $this->goBack();
         }
-
         $model->password = '';
         return $this->render('login', [
             'model' => $model,
