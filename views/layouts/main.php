@@ -52,6 +52,10 @@ AppAsset::register($this);
                 'label' => '<span class="glyphicon glyphicon-ok-circle"></span> Проверка статусов сообщений',
                 'url' => ['/site/check-message-status']
             ],
+            [
+                'label' => '<span class="glyphicon glyphicon-bullhorn"></span> Политика конфиденциальности',
+                'url' => ['/site/privacy-policy']
+            ],
         ],
     ]);
     echo Nav::widget([

@@ -5,7 +5,7 @@ $db = require __DIR__ . '/db.php';
 
 $config = [
     'id' => 'vks-project',
-    'name' => 'Система управления заявками и информирования',
+    'name' => 'СУЗИ',
     'defaultRoute' => 'site/index',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log'],
@@ -28,6 +28,8 @@ $config = [
             //'class' => 'app\components\LangUrlManager',
             'rules' => [
                 '/' => 'site/index',
+                'login' => 'site/login',
+                'privacy-policy' => 'site/privacy-policy',
                 'contact' => 'site/contact',
                 'checking' => 'site/checking',
                 'save-paths' => 'site/save-paths',

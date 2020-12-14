@@ -796,4 +796,14 @@ class SiteController extends Controller
             'model' => $model,
         ]);
     }
+
+    /**
+     * Страница с политикой конфиденциальности.
+     *
+     * @return string
+     */
+    public function actionPrivacyPolicy()
+    {
+        return $this->render('privacy-policy');
+    }
 }
