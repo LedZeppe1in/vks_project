@@ -107,6 +107,10 @@ use yii\helpers\Html;
                 отозвать свое согласие на обработку персональных данных, направив Оператору уведомление посредством
                 электронной почты на электронный адрес Оператора info@koopwork.ru с пометкой «Отзыв согласия на
                 обработку персональных данных».
+                6.5. Веб-сайт использует Google API и OAuth для изменения информации на Google-диске, в рамках данного
+                взаимодействия Оператор придерживается <?= Html::a('Google APIs Terms of Service',
+                    'https://developers.google.com/terms/') ?> и <?= Html::a('Google’s API Services User Data Policy',
+                    'https://developers.google.com/terms/api-services-user-data-policy') ?>.
             </li>
             <li>
                 <b>Трансграничная передача персональных данных</b><br />
@@ -125,8 +129,7 @@ use yii\helpers\Html;
                 8.2. В данном документе будут отражены любые изменения политики обработки персональных данных
                 Оператором. Политика действует бессрочно до замены ее новой версией;<br />
                 8.3. Актуальная версия Политики в свободном доступе расположена в сети Интернет по адресу
-                <?= Html::a('www.vks-project.koopwork.ru/privacy-policy/',
-                    'https://vks-project.koopwork.ru/privacy-policy/') ?>.
+                <?= Html::a('www.vks-project.koopwork.ru/privacy-policy', ['/site/privacy-policy/']) ?>.
             </li>
         </ol>
 
