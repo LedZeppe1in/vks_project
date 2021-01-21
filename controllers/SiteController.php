@@ -30,10 +30,12 @@ class SiteController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::className(),
-                'only' => ['logout', 'contact', 'data-synchronization', 'check-message-status'],
+                'only' => ['logout', 'contact', 'checking', 'save-paths', 'get-mailing-list', 'save-message-template',
+                    'notify-employees', 'check-message-status', 'data-synchronization'],
                 'rules' => [
                     [
-                        'actions' => ['logout', 'contact', 'data-synchronization', 'check-message-status'],
+                        'actions' => ['logout', 'contact', 'checking', 'save-paths', 'get-mailing-list',
+                            'save-message-template', 'notify-employees', 'check-message-status', 'data-synchronization'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -101,12 +103,16 @@ class SiteController extends Controller
                 $yandexSpreadsheet = new YandexSpreadsheet();
                 // Пусть до папки с учетными данными Google
                 $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
-                // Проверка существования файла электронной таблицы на Google-диске
-                $googleResource = $googleSpreadsheet->checkingSpreadsheet(
-                    $googleOAuthPath,
-                    Yii::$app->session,
-                    $cloudDriveModel->googleFileLink
-                );
+                try {
+                    // Проверка существования файла электронной таблицы на Google-диске
+                    $googleResource = $googleSpreadsheet->checkingSpreadsheet(
+                        $googleOAuthPath,
+                        Yii::$app->session,
+                        $cloudDriveModel->googleFileLink
+                    );
+                } catch (Exception $e) {
+                    $googleResource = $e->getMessage();
+                }
                 // Пусть до папки с файлом токена для доступа к Yandex-диску
                 $yandexOAuthPath = Yii::$app->basePath . '/web/yandex-oauth/';
                 // Проверка существования файла электронной таблицы на Yandex-диске
@@ -150,6 +156,8 @@ class SiteController extends Controller
      */
     public function actionDataSynchronization()
     {
+        // Установка времени выполнения скрипта в 3 часа
+        set_time_limit(60 * 200);
         // Пусть до папки с таблицами
         $path = Yii::$app->basePath . '/web/spreadsheets/';
         // Формирование модели (формы) CloudDriveForm
@@ -185,8 +193,15 @@ class SiteController extends Controller
         if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
             // Формирование массива дат для выборки строк
             $dates = $cloudDriveModel->getDates();
+            // Пусть до папки с файлом токена для доступа к Google-диску
+            $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
             // Копирование Google-таблицы на сервер
-            $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer($cloudDriveModel->googleFileLink, $path);
+            $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer(
+                $googleOAuthPath,
+                Yii::$app->session,
+                $cloudDriveModel->googleFileLink,
+                $path
+            );
             // Пусть до папки с файлом токена для доступа к Yandex-диску
             $yandexOAuthPath = Yii::$app->basePath . '/web/yandex-oauth/';
             // Копирование Yandex-таблицы на сервер
@@ -212,11 +227,13 @@ class SiteController extends Controller
                         // Если есть новые строки из Google-таблицы
                         if (!empty($googleSpreadsheetRows) || !empty($yandexSpreadsheetDeletedRows)) {
                             // Запись нового файла электронной таблицы с недостающими строками
-                            $yandexSpreadsheet->writeSpreadsheet(
-                                $googleSpreadsheetRows,
-                                $yandexSpreadsheetDeletedRows,
-                                $path
-                            );
+                            $yandexSpreadsheet->deleteRows($yandexSpreadsheetDeletedRows, $path);
+                            $massive = $yandexSpreadsheet->addRows($googleSpreadsheetRows, $path);
+//                            $massive = $yandexSpreadsheet->writeSpreadsheet(
+//                                $googleSpreadsheetRows,
+//                                $yandexSpreadsheetDeletedRows,
+//                                $path
+//                            );
                             // Загрузка нового файла электронной таблицы на Yandex-диск
                             $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive(
                                 $yandexOAuthPath,
@@ -272,7 +289,8 @@ class SiteController extends Controller
 
                                 return $this->render('yandex-synchronization', [
                                     'deletedRows' => $deletedRows,
-                                    'addedRows' => $addedRows
+                                    'addedRows' => $addedRows,
+                                    'foo' => $massive
                                 ]);
                             } else
                                 // Сообщение об ошибке синхронизации
@@ -357,8 +375,12 @@ class SiteController extends Controller
             $cloudDriveModel->googleFileLink = Yii::$app->request->post('google-file-link');
             $cloudDriveModel->fromDate = Yii::$app->request->post('from-date');
             $cloudDriveModel->toDate = Yii::$app->request->post('to-date');
+            // Пусть до папки с файлом токена для доступа к Google-диску
+            $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
             // Копирование Google-таблицы на сервер
             $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer(
+                $googleOAuthPath,
+                Yii::$app->session,
                 $cloudDriveModel->googleFileLink,
                 $path
             );
@@ -467,10 +489,14 @@ class SiteController extends Controller
                 $data['success'] = true;
                 // Пусть до папки с таблицами
                 $path = Yii::$app->basePath . '/web/spreadsheets/';
+                // Пусть до папки с файлом токена для доступа к Google-диску
+                $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
                 // Содание объекта для работы с Google-таблицей
                 $googleSpreadsheet = new GoogleSpreadsheet();
                 // Копирование Google-таблицы на сервер
                 $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer(
+                    $googleOAuthPath,
+                    Yii::$app->session,
                     $cloudDriveModel->googleFileLink,
                     $path
                 );

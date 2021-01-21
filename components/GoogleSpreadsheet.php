@@ -16,6 +16,11 @@ use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
  */
 class GoogleSpreadsheet
 {
+    // Название приложения
+    const APPLICATION_NAME = 'vks-koopwork-app';
+    // Название URI перенаправления
+    const REDIRECT_URI = 'https://www.vks-project.koopwork.ru';
+
     // Названия вкладок таблицы
     const REQUESTS_SHEET  = 'Заявки';
     const CHECKING_SHEET  = 'Сверка';
@@ -67,10 +72,10 @@ class GoogleSpreadsheet
     function getToken($oauthPath)
     {
         $client = new Google_Client();
-        $client->setApplicationName('vks project');
-        $client->setScopes(Google_Service_Drive::DRIVE);
+        $client->setApplicationName(self::APPLICATION_NAME);
+        $client->setScopes([Google_Service_Drive::DRIVE, 'https://www.googleapis.com/auth/spreadsheets']);
         $client->setAuthConfig($oauthPath . $this->oauthCredentials);
-        $client->setRedirectUri('http://localhost');
+        $client->setRedirectUri(self::REDIRECT_URI);
         $client->setAccessType('offline');
         $client->setPrompt('select_account consent');
         // Load previously authorized token from a file, if it exists.
@@ -120,8 +125,8 @@ class GoogleSpreadsheet
     {
         $client = new Google_Client();
         $client->setAuthConfig($oauthPath . $this->oauthCredentials);
-        $client->setRedirectUri('http://localhost');
-        $client->addScope(Google_Service_Drive::DRIVE);
+        $client->setRedirectUri(self::REDIRECT_URI);
+        $client->addScope([Google_Service_Drive::DRIVE, 'https://www.googleapis.com/auth/spreadsheets']);
         // Автоматическое обновление токена
         $client->setAccessType('offline');
         $client->setApprovalPrompt('force');
@@ -174,8 +179,8 @@ class GoogleSpreadsheet
     {
         $client = new Google_Client();
         $client->setAuthConfig($oauthPath . $this->oauthCredentials);
-        $client->setRedirectUri('http://localhost');
-        $client->addScope(Google_Service_Drive::DRIVE);
+        $client->setRedirectUri(self::REDIRECT_URI);
+        $client->addScope([Google_Service_Drive::DRIVE, 'https://www.googleapis.com/auth/spreadsheets']);
         // Автоматическое обновление токена
         $client->setAccessType('offline');
         $client->setApprovalPrompt('force');
@@ -192,7 +197,6 @@ class GoogleSpreadsheet
         $client->setAccessToken($session->get('upload_token'));
         // Если токен установлен
         if ($client->getAccessToken()) {
-            $resource = array();
             // Получение id файла по публичной ссылке на файл электронной таблицы на Google-диске
             $fileId = self::getFileID($fileLink);
             // Инициализация объекта Google-диска
@@ -213,27 +217,68 @@ class GoogleSpreadsheet
     }
 
     /**
-     * Копирование файла электронной таблицей с Yandex-диска на сервер.
+     * Копирование файла электронной таблицей с Google-диска на сервер.
      *
+     * @param $oauthPath - путь к файлам авторизации (учетным данным и токену) для Google Drive API
+     * @param $session - текущая сессия пользователя
      * @param $fileLink - публичная ссылка на файл электронной таблицы на Google-диске
      * @param $path - путь сохранения файла электронной таблицы на сервере
      * @return bool - успешность копирования
+     * @throws \Google_Exception
      */
-    public function copySpreadsheetToServer($fileLink, $path)
+    public function copySpreadsheetToServer($oauthPath, $session, $fileLink, $path)
     {
-        // Получение id файла по публичной ссылке на файл электронной таблицы на Google-диске
-        $fileId = self::getFileID($fileLink);
-        // Формирование URL для скачивания файла таблицы с Google Doc
-        $urlGoogleDisk = 'https://docs.google.com/spreadsheets/d/' . $fileId . '/export?format=xlsx&id=' . $fileId;
-        try {
+        $client = new Google_Client();
+        $client->setAuthConfig($oauthPath . $this->oauthCredentials);
+        $client->setRedirectUri(self::REDIRECT_URI);
+        $client->addScope([Google_Service_Drive::DRIVE, 'https://www.googleapis.com/auth/spreadsheets']);
+        // Автоматическое обновление токена
+        $client->setAccessType('offline');
+        $client->setApprovalPrompt('force');
+        // Если токен уже в сессии, то он мог быть обновлен - сохранение его в json-файл
+        if ($session->get('upload_token')) {
+            $fh = fopen($oauthPath . $this->tokenFileName, 'w');
+            fwrite($fh, json_encode($session->get('upload_token')));
+            fclose($fh);
+        } else
+            // Если токена еще нет в сессии, то получение его из json-файла и добавление в сессию
+            $session->set('upload_token',
+                json_decode(file_get_contents($oauthPath . $this->tokenFileName), true));
+        // Установка токена
+        $client->setAccessToken($session->get('upload_token'));
+        // Если токен установлен
+        if ($client->getAccessToken()) {
+            // Получение id файла по публичной ссылке на файл электронной таблицы на Google-диске
+            $fileId = self::getFileID($fileLink);
+            // Инициализация объекта Google-диска
+            $drive = new Google_Service_Drive($client);
+            // Экспорт файла электронной таблицы
+            $response = $drive->files->export(
+                $fileId,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                array('alt' => 'media')
+            );
             // Получение содержимого Google-таблицы
-            file_put_contents($path . $this->fileName, file_get_contents($urlGoogleDisk));
+            file_put_contents($path . $this->fileName, $response->getBody()->getContents());
 
             return true;
         }
-        catch (Exception $e) {
-            return false;
-        }
+
+        return false;
+
+//        // Получение id файла по публичной ссылке на файл электронной таблицы на Google-диске
+//        $fileId = self::getFileID($fileLink);
+//        // Формирование URL для скачивания файла таблицы с Google Doc
+//        $urlGoogleDisk = 'https://docs.google.com/spreadsheets/d/' . $fileId . '/export?format=xlsx&id=' . $fileId;
+//        try {
+//            // Получение содержимого Google-таблицы
+//            file_put_contents($path . $this->fileName, file_get_contents($urlGoogleDisk));
+//
+//            return true;
+//        }
+//        catch (Exception $e) {
+//            return false;
+//        }
     }
 
     /**
@@ -406,14 +451,17 @@ class GoogleSpreadsheet
                         foreach ($googleSpreadsheetRows as $googleSpreadsheetRow)
                             // Если табельные номера совпадают
                             if ($googleSpreadsheetRow[5] == $employee[1]) {
-                                // Добавление в массив сотрудника недостающей информации
-                                array_push($employee, $googleSpreadsheetRow[0]);
-                                array_push($employee, $googleSpreadsheetRow[3]);
-                                array_push($employee, $googleSpreadsheetRow[4]);
-                                array_push($employee, $googleSpreadsheetRow[1]);
-                                array_push($employee, $googleSpreadsheetRow[2]);
+                                // Формирование массива с информацией о сотруднике на работе
+                                $employeeInformation = array();
+                                $employeeInformation = $employee;
+                                // Добавление недостающей информации в массив информации о сотруднике на работе
+                                array_push($employeeInformation, $googleSpreadsheetRow[0]);
+                                array_push($employeeInformation, $googleSpreadsheetRow[3]);
+                                array_push($employeeInformation, $googleSpreadsheetRow[4]);
+                                array_push($employeeInformation, $googleSpreadsheetRow[1]);
+                                array_push($employeeInformation, $googleSpreadsheetRow[2]);
                                 // Добавление текущей строки с информацией о сотруднике в массив
-                                array_push($employees, $employee);
+                                array_push($employees, $employeeInformation);
                             }
                     }
         $reader->close();

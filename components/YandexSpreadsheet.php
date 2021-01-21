@@ -36,6 +36,7 @@ class YandexSpreadsheet
 
     public $tokenFileName = 'token.txt';                   // Название файла c токеном для доступа к Yandex-диску
     public $fileName      = 'yandex-spreadsheet.xlsx';     // Название файла электронной таблицы на сервере для обработки
+    public $fooFileName   = 'foo-yandex-spreadsheet.xlsx';
     public $newFileName   = 'new-yandex-spreadsheet.xlsx'; // Название нового файла электронной таблицы на сервере после обработки
     public $colorFileName = 'current-cell-color.txt';      // Название файла с текущим цветом для подсветки добавленных строк
 
@@ -170,26 +171,17 @@ class YandexSpreadsheet
                                 $cellNumber == 3 || $cellNumber == 4)
                                 array_push($spreadsheetRow, $cell->getValue());
                         // Если массив дат пуст или если текущая дата в строке входит в диапозон дат выборки
-                        if (empty($dates) || in_array($spreadsheetRow[0], $dates))
-                            // Добавление текущей строки в массив
-                            $spreadsheetRows[$rowNumber] = $spreadsheetRow;
+                        if (isset($spreadsheetRow[0]))
+                            if (empty($dates) || in_array($spreadsheetRow[0], $dates))
+                                // Добавление текущей строки в массив
+                                $spreadsheetRows[$rowNumber] = $spreadsheetRow;
                     }
         $reader->close();
 
         return $spreadsheetRows;
     }
 
-    /**
-     * Запись обновленной электронной таблицы в файл.
-     *
-     * @param $googleSpreadsheetRows - массив найденных строк в Google-таблице для вставки
-     * @param $yandexSpreadsheetDeletedRows - массив номеров строк из Yandex-таблицы, которые необходимо удалить
-     * @param $path - путь к файлу электронной таблицы на сервере
-     * @throws \PhpOffice\PhpSpreadsheet\Exception
-     * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
-     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
-     */
-    public function writeSpreadsheet($googleSpreadsheetRows, $yandexSpreadsheetDeletedRows, $path)
+    public function deleteRows($yandexSpreadsheetDeletedRows, $path)
     {
         // Чтение Yandex-таблицы
         $reader = IOFactory::createReader("Xlsx");
@@ -204,74 +196,167 @@ class YandexSpreadsheet
                 $i++;
             }
         }
-        // Если массив с найденными строками в Google-таблице не пустой
-        if (!empty($googleSpreadsheetRows)) {
-            $currentColor = self::GREEN_COLOR_2;
-            $currentDate = date('d.m.Y');
-            // Если существует файл с цветом для подсветки добавленных строк
-            if (file_exists($path . $this->colorFileName)) {
-                // Получение текущего цвета подсветки добавленных строк из файла
-                $line = 0;
-                $fh = fopen($path . $this->colorFileName, 'r');
-                while (($buffer = fgets($fh)) !== FALSE) {
-                    if ($line == 0)
-                        $currentColor = $buffer;
-                    if ($line == 1)
-                        $currentDate = $buffer;
-                    $line++;
-                }
-                fclose($fh);
-            }
-            // Если файл с цветом для подсветки добавленных строк не существует или
-            // переменная с датой не равна текущей дате
-            if (file_exists($path . $this->colorFileName) == false || $currentDate != date('d.m.Y')) {
-                // Обновление переменной с текущей датой
-                $currentDate = date('d.m.Y');
-                // Смена цвета для подсветки добавленных строк
-                if ($currentColor == self::GREEN_COLOR_1 . PHP_EOL)
-                    $currentColor = self::GREEN_COLOR_2;
-                else
-                    $currentColor = self::GREEN_COLOR_1;
-                // Запись в файл текущего цвета для подсветки добавленных строк
-                file_put_contents($path . $this->colorFileName, $currentColor . PHP_EOL . $currentDate);
-            }
-            // Добавление новых строк в Yandex-таблицу
-            foreach ($googleSpreadsheetRows as $googleSpreadsheetRow) {
-                // Добавление новой строки в конец электронной таблицы
-                $row = $worksheet->getHighestRow() + 1;
-                $worksheet->insertNewRowBefore($row);
-                // Определение стиля даты для ячеек с датой
-                $worksheet->getStyle('A' . $row)
-                    ->getNumberFormat()
-                    ->setFormatCode(NumberFormat::FORMAT_DATE_DDMMYYYY);
-                // Определение стилей времени для ячеек с временем
-                $worksheet->getStyle('D' . $row)
-                    ->getNumberFormat()
-                    ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
-                $worksheet->getStyle('E' . $row)
-                    ->getNumberFormat()
-                    ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
-                // Определение значений ячеек
-                $excelDateValue = Date::PHPToExcel($googleSpreadsheetRow[0]);
-                $worksheet->setCellValue('A' . $row, $excelDateValue);
-                $worksheet->setCellValue('B' . $row, $googleSpreadsheetRow[1]);
-                $worksheet->setCellValue('C' . $row, $googleSpreadsheetRow[2]);
-                $excelStartTimeValue = Date::PHPToExcel($googleSpreadsheetRow[3]);
-                $worksheet->setCellValue('D' . $row, $excelStartTimeValue);
-                $excelEndTimeValue = Date::PHPToExcel($googleSpreadsheetRow[4]);
-                $worksheet->setCellValue('E' . $row, $excelEndTimeValue);
-                $worksheet->setCellValue('F' . $row, $googleSpreadsheetRow[5]);
-                // Задание цвета ячеек
-                $worksheet->getStyle('A' . $row . ':L' . $row)
-                    ->getFill()
-                    ->setFillType(Fill::FILL_SOLID)
-                    ->getStartColor()
-                    ->setARGB($currentColor);
-            }
-        }
         // Обновление файла Yandex-таблицы
         $writer = new Xlsx($spreadsheet);
-        $writer->save($path . $this->newFileName);
+        $writer->save($path . $this->fooFileName);
+    }
+
+    public function addRows($googleSpreadsheetRows, $path)
+    {
+        $foo = array();
+        // Чтение Yandex-таблицы
+        $spoutReader = ReaderEntityFactory::createReaderFromFile($path . $this->fooFileName);
+        $spoutReader->open($path . $this->fooFileName);
+        foreach ($googleSpreadsheetRows as $key => $googleSpreadsheetRow) {
+            foreach ($googleSpreadsheetRow as $keyd => $googleSpreadsheetCell)
+                if ($keyd == 0)
+                    //array_push($foo, $googleSpreadsheetCell->format('m/d/Y'));
+                    foreach ($spoutReader->getSheetIterator() as $sheet)
+                        if ($sheet->getName() === self::FIRST_SHEET_SHEET)
+                            foreach ($sheet->getRowIterator() as $rowNumber => $row)
+                                if ($rowNumber > 1)
+                                    foreach ($row->getCells() as $cellNumber => $cell)
+                                        if ($cellNumber == 0) {
+//                                            $array = explode('/',  $cell->getValue());
+//                                            if (isset($array[0]))
+//                                                if (strlen($array[0]) == 1)
+//                                                    $array[0] = '0' . $array[0];
+//                                            if (isset($array[1]))
+//                                                if (strlen($array[1]) == 1)
+//                                                    $array[1] = '0' . $array[1];
+//                                            $date = implode("/", $array);
+                                            array_push($foo, [$googleSpreadsheetCell->format('m/d/Y'), date('m/d/Y', $cell->getValue())]);
+//                                            if ($googleSpreadsheetCell->format('m/d/Y') == $date)
+//                                                $foo[$key] = $rowNumber;
+                                        }
+        }
+        $spoutReader->close();
+
+//        // Чтение Yandex-таблицы
+//        $reader = IOFactory::createReader("Xlsx");
+//        $spreadsheet = $reader->load($path . $this->fooFileName);
+//        $worksheet = $spreadsheet->setActiveSheetIndexByName(self::FIRST_SHEET_SHEET);
+//        // Если массив с найденными строками в Google-таблице не пустой
+//        if (!empty($googleSpreadsheetRows)) {
+//            $currentColor = self::GREEN_COLOR_2;
+//            $currentDate = date('d.m.Y');
+//            // Если существует файл с цветом для подсветки добавленных строк
+//            if (file_exists($path . $this->colorFileName)) {
+//                // Получение текущего цвета подсветки добавленных строк из файла
+//                $line = 0;
+//                $fh = fopen($path . $this->colorFileName, 'r');
+//                while (($buffer = fgets($fh)) !== FALSE) {
+//                    if ($line == 0)
+//                        $currentColor = $buffer;
+//                    if ($line == 1)
+//                        $currentDate = $buffer;
+//                    $line++;
+//                }
+//                fclose($fh);
+//            }
+//            // Если файл с цветом для подсветки добавленных строк не существует или
+//            // переменная с датой не равна текущей дате
+//            if (file_exists($path . $this->colorFileName) == false || $currentDate != date('d.m.Y')) {
+//                // Обновление переменной с текущей датой
+//                $currentDate = date('d.m.Y');
+//                // Смена цвета для подсветки добавленных строк
+//                if ($currentColor == self::GREEN_COLOR_1 . PHP_EOL)
+//                    $currentColor = self::GREEN_COLOR_2;
+//                else
+//                    $currentColor = self::GREEN_COLOR_1;
+//                // Запись в файл текущего цвета для подсветки добавленных строк
+//                file_put_contents($path . $this->colorFileName, $currentColor . PHP_EOL . $currentDate);
+//            }
+//            // Добавление новых строк в Yandex-таблицу
+//            foreach ($googleSpreadsheetRows as $key => $googleSpreadsheetRow) {
+//                foreach ($foo as $keyG => $goo)
+//                    if ($key == $keyG) {
+//                        // Добавление новой строки в конец электронной таблицы
+//                        $worksheet->insertNewRowBefore($goo);
+//                        // Определение стиля даты для ячеек с датой
+//                        $worksheet->getStyle('A' . $goo)
+//                            ->getNumberFormat()
+//                            ->setFormatCode(NumberFormat::FORMAT_DATE_DDMMYYYY);
+//                        // Определение стилей времени для ячеек с временем
+//                        $worksheet->getStyle('D' . $goo)
+//                            ->getNumberFormat()
+//                            ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
+//                        $worksheet->getStyle('E' . $goo)
+//                            ->getNumberFormat()
+//                            ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
+//                        // Определение значений ячеек
+//                        $excelDateValue = Date::PHPToExcel($googleSpreadsheetRow[0]);
+//                        $worksheet->setCellValue('A' . $goo, $excelDateValue);
+//                        $worksheet->setCellValue('B' . $goo, $googleSpreadsheetRow[1]);
+//                        $worksheet->setCellValue('C' . $goo, $googleSpreadsheetRow[2]);
+//                        $excelStartTimeValue = Date::PHPToExcel($googleSpreadsheetRow[3]);
+//                        $worksheet->setCellValue('D' . $goo, $excelStartTimeValue);
+//                        $excelEndTimeValue = Date::PHPToExcel($googleSpreadsheetRow[4]);
+//                        $worksheet->setCellValue('E' . $goo, $excelEndTimeValue);
+//                        $worksheet->setCellValue('F' . $goo, $googleSpreadsheetRow[5]);
+//                        // Задание цвета ячеек
+//                        $worksheet->getStyle('A' . $goo . ':L' . $goo)
+//                            ->getFill()
+//                            ->setFillType(Fill::FILL_SOLID)
+//                            ->getStartColor()
+//                            ->setARGB($currentColor);
+//                    }
+//
+////                // Добавление новой строки в конец электронной таблицы
+////                $row = $worksheet->getHighestRow() + 1;
+////                $worksheet->insertNewRowBefore($row);
+////                // Определение стиля даты для ячеек с датой
+////                $worksheet->getStyle('A' . $row)
+////                    ->getNumberFormat()
+////                    ->setFormatCode(NumberFormat::FORMAT_DATE_DDMMYYYY);
+////                // Определение стилей времени для ячеек с временем
+////                $worksheet->getStyle('D' . $row)
+////                    ->getNumberFormat()
+////                    ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
+////                $worksheet->getStyle('E' . $row)
+////                    ->getNumberFormat()
+////                    ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
+////                // Определение значений ячеек
+////                $excelDateValue = Date::PHPToExcel($googleSpreadsheetRow[0]);
+////                $worksheet->setCellValue('A' . $row, $excelDateValue);
+////                $worksheet->setCellValue('B' . $row, $googleSpreadsheetRow[1]);
+////                $worksheet->setCellValue('C' . $row, $googleSpreadsheetRow[2]);
+////                $excelStartTimeValue = Date::PHPToExcel($googleSpreadsheetRow[3]);
+////                $worksheet->setCellValue('D' . $row, $excelStartTimeValue);
+////                $excelEndTimeValue = Date::PHPToExcel($googleSpreadsheetRow[4]);
+////                $worksheet->setCellValue('E' . $row, $excelEndTimeValue);
+////                $worksheet->setCellValue('F' . $row, $googleSpreadsheetRow[5]);
+////                // Задание цвета ячеек
+////                $worksheet->getStyle('A' . $row . ':L' . $row)
+////                    ->getFill()
+////                    ->setFillType(Fill::FILL_SOLID)
+////                    ->getStartColor()
+////                    ->setARGB($currentColor);
+//            }
+//        }
+//        // Обновление файла Yandex-таблицы
+//        $writer = new Xlsx($spreadsheet);
+//        $writer->save($path . $this->newFileName);
+
+        return $foo;
+    }
+
+    /**
+     * Запись обновленной электронной таблицы в файл.
+     *
+     * @param $googleSpreadsheetRows - массив найденных строк в Google-таблице для вставки
+     * @param $yandexSpreadsheetDeletedRows - массив номеров строк из Yandex-таблицы, которые необходимо удалить
+     * @param $path - путь к файлу электронной таблицы на сервере
+     * @throws \PhpOffice\PhpSpreadsheet\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
+     */
+    public function writeSpreadsheet($googleSpreadsheetRows, $yandexSpreadsheetDeletedRows, $path)
+    {
+       $this->deleteRows($yandexSpreadsheetDeletedRows, $path);
+       $foo = $this->addRows($googleSpreadsheetRows, $path);
+
+       return $foo;
     }
 
     /**

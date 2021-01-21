@@ -113,7 +113,7 @@ use app\components\GoogleSpreadsheet;
                 ],
             ]); ?>
 
-            <?= Html::beginForm(['index'], 'post',
+            <?= Html::beginForm(['data-synchronization'], 'post',
                 ['id' => 'pjax-form', 'data-pjax' => '', 'style' => 'display:none']); ?>
                 <?= Html::hiddenInput('google-file-link', '', ['id' => 'pjax-google-file-link-input']) ?>
                 <?= Html::hiddenInput('from-date', '', ['id' => 'pjax-from-date-input']) ?>

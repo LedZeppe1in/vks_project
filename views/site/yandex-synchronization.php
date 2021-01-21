@@ -3,6 +3,7 @@
 /* @var $this yii\web\View */
 /* @var $deletedRows app\controllers\SiteController */
 /* @var $addedRows app\controllers\SiteController */
+/* @var $foo app\controllers\SiteController */
 
 $this->title = 'Система управления заявками и информирования';
 
@@ -16,6 +17,12 @@ use app\components\YandexSpreadsheet;
     <h1><?= Html::encode($this->title) ?></h1>
 
     <div class="body-content">
+
+        <?php
+        echo '<pre>';
+        print_r($foo);
+        echo '</pre>'; ?>
+
         <h3>Удаленные строки:</h3>
         <?= GridView::widget([
             'dataProvider' => $deletedRows,
