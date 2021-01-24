@@ -226,14 +226,27 @@ class SiteController extends Controller
                         );
                         // Если есть новые строки из Google-таблицы
                         if (!empty($googleSpreadsheetRows) || !empty($yandexSpreadsheetDeletedRows)) {
-                            // Запись нового файла электронной таблицы с недостающими строками
+                            // Удаление строк из массива всех строк Yandex-таблицы
+                            $yandexSpreadsheetBeforeDeletingRows = $yandexSpreadsheetRows;
+                            foreach ($yandexSpreadsheetBeforeDeletingRows as $key => $yandexSpreadsheetRow)
+                                foreach ($yandexSpreadsheetDeletedRows as $yandexSpreadsheetDeletedRow)
+                                    if ($key == $yandexSpreadsheetDeletedRow)
+                                        unset($yandexSpreadsheetBeforeDeletingRows[$key]);
+                            // Формирование массива строк Yandex-таблицы после удаления из нее строк
+                            $yandexSpreadsheetAfterDeletingRows = array();
+                            $i = 2;
+                            foreach ($yandexSpreadsheetBeforeDeletingRows as $key => $yandexSpreadsheetRow) {
+                                $yandexSpreadsheetAfterDeletingRows[$i] = $yandexSpreadsheetRow;
+                                $i++;
+                            }
+                            // Запись нового файла электронной таблицы с удаленными строками
                             $yandexSpreadsheet->deleteRows($yandexSpreadsheetDeletedRows, $path);
-                            $massive = $yandexSpreadsheet->addRows($googleSpreadsheetRows, $path);
-//                            $massive = $yandexSpreadsheet->writeSpreadsheet(
-//                                $googleSpreadsheetRows,
-//                                $yandexSpreadsheetDeletedRows,
-//                                $path
-//                            );
+                            // Запись нового файла электронной таблицы с добавленными недостающими строками
+                            $yandexSpreadsheet->addRows(
+                                $googleSpreadsheetRows,
+                                $yandexSpreadsheetAfterDeletingRows,
+                                $path
+                            );
                             // Загрузка нового файла электронной таблицы на Yandex-диск
                             $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive(
                                 $yandexOAuthPath,
@@ -289,8 +302,7 @@ class SiteController extends Controller
 
                                 return $this->render('yandex-synchronization', [
                                     'deletedRows' => $deletedRows,
-                                    'addedRows' => $addedRows,
-                                    'foo' => $massive
+                                    'addedRows' => $addedRows
                                 ]);
                             } else
                                 // Сообщение об ошибке синхронизации
