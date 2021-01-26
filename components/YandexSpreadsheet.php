@@ -270,43 +270,80 @@ class YandexSpreadsheet
                 // Запись в файл текущего цвета для подсветки добавленных строк
                 file_put_contents($path . $this->colorFileName, $currentColor . PHP_EOL . $currentDate);
             }
-            $i = 1;
-            // Добавление новых строк в Yandex-таблицу
-            foreach ($googleSpreadsheetRows as $googleKey => $googleSpreadsheetRow) {
-                foreach ($rowPositions as $positionKey => $position)
-                    if ($googleKey == $positionKey) {
-                        $currentPosition = $position + $i;
-                        // Добавление новой строки в позицию (в конец строк по определенной дате)
-                        $worksheet->insertNewRowBefore($currentPosition);
-                        // Определение стиля даты для ячеек с датой
-                        $worksheet->getStyle('A' . $currentPosition)
-                            ->getNumberFormat()
-                            ->setFormatCode(NumberFormat::FORMAT_DATE_DDMMYYYY);
-                        // Определение стилей времени для ячеек с временем
-                        $worksheet->getStyle('D' . $currentPosition)
-                            ->getNumberFormat()
-                            ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
-                        $worksheet->getStyle('E' . $currentPosition)
-                            ->getNumberFormat()
-                            ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
-                        // Определение значений ячеек
-                        $excelDateValue = Date::PHPToExcel($googleSpreadsheetRow[0]);
-                        $worksheet->setCellValue('A' . $currentPosition, $excelDateValue);
-                        $worksheet->setCellValue('B' . $currentPosition, $googleSpreadsheetRow[1]);
-                        $worksheet->setCellValue('C' . $currentPosition, $googleSpreadsheetRow[2]);
-                        $excelStartTimeValue = Date::PHPToExcel($googleSpreadsheetRow[3]);
-                        $worksheet->setCellValue('D' . $currentPosition, $excelStartTimeValue);
-                        $excelEndTimeValue = Date::PHPToExcel($googleSpreadsheetRow[4]);
-                        $worksheet->setCellValue('E' . $currentPosition, $excelEndTimeValue);
-                        $worksheet->setCellValue('F' . $currentPosition, $googleSpreadsheetRow[5]);
-                        // Задание цвета ячеек
-                        $worksheet->getStyle('A' . $currentPosition . ':L' . $currentPosition)
-                            ->getFill()
-                            ->setFillType(Fill::FILL_SOLID)
-                            ->getStartColor()
-                            ->setARGB($currentColor);
-                    }
-                $i++;
+            //
+            if (!empty($rowPositions)) {
+                $i = 1;
+                // Добавление новых строк в Yandex-таблицу
+                foreach ($googleSpreadsheetRows as $googleKey => $googleSpreadsheetRow) {
+                    foreach ($rowPositions as $positionKey => $position)
+                        if ($googleKey == $positionKey) {
+                            $currentPosition = $position + $i;
+                            // Добавление новой строки в позицию (в конец строк по определенной дате)
+                            $worksheet->insertNewRowBefore($currentPosition);
+                            // Определение стиля даты для ячеек с датой
+                            $worksheet->getStyle('A' . $currentPosition)
+                                ->getNumberFormat()
+                                ->setFormatCode(NumberFormat::FORMAT_DATE_DDMMYYYY);
+                            // Определение стилей времени для ячеек с временем
+                            $worksheet->getStyle('D' . $currentPosition)
+                                ->getNumberFormat()
+                                ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
+                            $worksheet->getStyle('E' . $currentPosition)
+                                ->getNumberFormat()
+                                ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
+                            // Определение значений ячеек
+                            $excelDateValue = Date::PHPToExcel($googleSpreadsheetRow[0]);
+                            $worksheet->setCellValue('A' . $currentPosition, $excelDateValue);
+                            $worksheet->setCellValue('B' . $currentPosition, $googleSpreadsheetRow[1]);
+                            $worksheet->setCellValue('C' . $currentPosition, $googleSpreadsheetRow[2]);
+                            $excelStartTimeValue = Date::PHPToExcel($googleSpreadsheetRow[3]);
+                            $worksheet->setCellValue('D' . $currentPosition, $excelStartTimeValue);
+                            $excelEndTimeValue = Date::PHPToExcel($googleSpreadsheetRow[4]);
+                            $worksheet->setCellValue('E' . $currentPosition, $excelEndTimeValue);
+                            $worksheet->setCellValue('F' . $currentPosition, $googleSpreadsheetRow[5]);
+                            // Задание цвета ячеек
+                            $worksheet->getStyle('A' . $currentPosition . ':L' . $currentPosition)
+                                ->getFill()
+                                ->setFillType(Fill::FILL_SOLID)
+                                ->getStartColor()
+                                ->setARGB($currentColor);
+                        }
+                    $i++;
+                }
+            } else {
+                // Добавление новых строк в Yandex-таблицу
+                foreach ($googleSpreadsheetRows as $key => $googleSpreadsheetRow) {
+                    // Добавление новой строки в конец электронной таблицы
+                    $row = $worksheet->getHighestRow() + 1;
+                    $worksheet->insertNewRowBefore($row);
+                    // Определение стиля даты для ячеек с датой
+                    $worksheet->getStyle('A' . $row)
+                        ->getNumberFormat()
+                        ->setFormatCode(NumberFormat::FORMAT_DATE_DDMMYYYY);
+                    // Определение стилей времени для ячеек с временем
+                    $worksheet->getStyle('D' . $row)
+                        ->getNumberFormat()
+                        ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
+                    $worksheet->getStyle('E' . $row)
+                        ->getNumberFormat()
+                        ->setFormatCode(NumberFormat::FORMAT_DATE_TIME3);
+                    // Определение значений ячеек
+                    $excelDateValue = Date::PHPToExcel($googleSpreadsheetRow[0]);
+                    $worksheet->setCellValue('A' . $row, $excelDateValue);
+                    $worksheet->setCellValue('B' . $row, $googleSpreadsheetRow[1]);
+                    $worksheet->setCellValue('C' . $row, $googleSpreadsheetRow[2]);
+                    $excelStartTimeValue = Date::PHPToExcel($googleSpreadsheetRow[3]);
+                    $worksheet->setCellValue('D' . $row, $excelStartTimeValue);
+                    $excelEndTimeValue = Date::PHPToExcel($googleSpreadsheetRow[4]);
+                    $worksheet->setCellValue('E' . $row, $excelEndTimeValue);
+                    $worksheet->setCellValue('F' . $row, $googleSpreadsheetRow[5]);
+                    // Задание цвета ячеек
+                    $worksheet->getStyle('A' . $row . ':L' . $row)
+                        ->getFill()
+                        ->setFillType(Fill::FILL_SOLID)
+                        ->getStartColor()
+                        ->setARGB($currentColor);
+                }
             }
         }
         // Обновление файла Yandex-таблицы
