@@ -216,6 +216,25 @@ class SiteController extends Controller
                 switch (Yii::$app->request->post('synchronization-button')) {
                     // Если нажата кнопка синхронизации с Yandex-диском
                     case 'yandex-synchronization':
+                        // Создание директории для результирующей Yandex-таблицы на сервере в папке логов
+                        $yandexLogPath = Yii::$app->basePath . YandexSpreadsheet::SPREADSHEET_LOG_PATH .
+                            date("d.m.Y H:i:s") . '/';
+                        $dstYandexFile = $yandexLogPath . $yandexSpreadsheet->newFileName;
+                        if (!file_exists($dstYandexFile))
+                            mkdir(dirname($dstYandexFile), 0777, true);
+                        // Копирование исходной Google-таблицы на сервер в папку логов
+                        $googleSpreadsheet->copySpreadsheetToServer(
+                            $googleOAuthPath,
+                            Yii::$app->session,
+                            $cloudDriveModel->googleFileLink,
+                            $yandexLogPath
+                        );
+                        // Копирование исходной Yandex-таблицы на сервер в папку логов
+                        $yandexSpreadsheet->copySpreadsheetByPathToServer(
+                            $yandexOAuthPath,
+                            $cloudDriveModel->yandexFilePath,
+                            $yandexLogPath
+                        );
                         // Получение всех строк из Yandex-таблицы
                         $yandexSpreadsheetRows = $yandexSpreadsheet->getRows($path, $dates);
                         // Синхронизация с Yandex (поиск недостающих строк)
@@ -255,6 +274,8 @@ class SiteController extends Controller
                             );
                             // Если нет ошибки при загрузке электронной таблицы на Yandex-диск
                             if ($uploadFlag) {
+                                // Копирование результирующей Yandex-таблицы на сервер в папку логов
+                                copy($path . $yandexSpreadsheet->newFileName, $dstYandexFile);
                                 // Формирование массива удаленных строк для вывода на экран
                                 $yandexArray = array();
                                 foreach ($yandexSpreadsheetRows as $foo => $yandexSpreadsheetRow)
@@ -315,6 +336,25 @@ class SiteController extends Controller
                         break;
                     // Если нажата кнопка синхронизации с Google-диском
                     case 'google-synchronization':
+                        // Создание директории для результирующей Google-таблицы на сервере в папке логов
+                        $googleLogPath = Yii::$app->basePath . GoogleSpreadsheet::SPREADSHEET_LOG_PATH .
+                            date("d.m.Y H:i:s") . '/';
+                        $dstGoogleFile = $googleLogPath . $googleSpreadsheet->newFileName;
+                        if (!file_exists($dstGoogleFile))
+                            mkdir(dirname($dstGoogleFile), 0777, true);
+                        // Копирование исходной Google-таблицы на сервер в папку логов
+                        $googleSpreadsheet->copySpreadsheetToServer(
+                            $googleOAuthPath,
+                            Yii::$app->session,
+                            $cloudDriveModel->googleFileLink,
+                            $googleLogPath
+                        );
+                        // Копирование исходной Yandex-таблицы на сервер в папку логов
+                        $yandexSpreadsheet->copySpreadsheetByPathToServer(
+                            $yandexOAuthPath,
+                            $cloudDriveModel->yandexFilePath,
+                            $googleLogPath
+                        );
                         // Получение всех строк из Google-таблицы
                         $googleSpreadsheetRows = $googleSpreadsheet->getRows($path, $dates);
                         // Синхронизация с Google (поиск строк c табельными номерами)
@@ -338,6 +378,8 @@ class SiteController extends Controller
                             );
                             // Если нет ошибки при записи электронной таблицы на Google-диск
                             if ($uploadFlag) {
+                                // Копирование результирующей Google-таблицы на сервер в папку логов
+                                copy($path . $googleSpreadsheet->newFileName, $dstGoogleFile);
                                 // Формирование массива добавленных строк для вывода на экран
                                 $yandexArray = array();
                                 foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {
@@ -378,7 +420,7 @@ class SiteController extends Controller
             } else
                 // Сообщение об ошибке синхронизации
                 Yii::$app->getSession()->setFlash('error',
-                    'Ошибка синхронизации! При копировании файла электронной таблицы на сервер возникли ошибки.');
+                    'Ошибка синхронизации! При копировании файла электронной таблицы на сервер возникла ошибка.');
         }
 
         // Pjax-запрос

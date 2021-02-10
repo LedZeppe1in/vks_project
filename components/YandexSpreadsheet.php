@@ -34,6 +34,9 @@ class YandexSpreadsheet
     const GREEN_COLOR_1 = 'dbead5';
     const GREEN_COLOR_2 = '7ef87e';
 
+    // Название папки с копиями таблиц (лог синхронизации с Yandex-диском)
+    const SPREADSHEET_LOG_PATH = '/web/yandex-synchronization-logs/';
+
     // Название файла c токеном для доступа к Yandex-диску
     public $tokenFileName        = 'token.txt';
     // Название файла электронной таблицы на сервере для обработки

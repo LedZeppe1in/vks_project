@@ -40,6 +40,9 @@ class GoogleSpreadsheet
     const EMPLOYEE_ID_HEADING              = 'табельный номер';
     const REQUEST_ADJUSTMENTS_HEADING      = 'Корректировки заявок';
 
+    // Название папки с копиями таблиц (лог синхронизации с Google-диском)
+    const SPREADSHEET_LOG_PATH = '/web/google-synchronization-logs/';
+
     public $oauthCredentials = 'client_id.json';         // Название файла с учетными данными от Google
     public $tokenFileName = 'token.json';                // Название файла c токеном для доступа к Google-диску
     public $fileName = 'google-spreadsheet.xlsx';        // Название файла с электронной таблицей на сервере
