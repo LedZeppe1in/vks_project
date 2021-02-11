@@ -270,7 +270,7 @@ use yii\bootstrap\Tabs;
                                 employees = data["employees"];
                                 // Если нет ошибок, то вывод текущего баланса
                                 if (data["balance"] != '-1' && data["balance"] != '-2')
-                                    currentBalanceTitle.innerHTML = data["balance"];
+                                    currentBalanceTitle.innerHTML = data["balance"] + " СМС";
                                 else
                                     currentBalanceTitle.innerHTML = "не удалось проверить баланс";
                                 // Формирование информации об объеме рассылки
@@ -416,7 +416,7 @@ use yii\bootstrap\Tabs;
                         saveFileSuccessMessage.style.display = "none";
                         // Если нет ошибок, то вывод текущего баланса
                         if (data["balance"] != '-1' && data["balance"] != '-2')
-                            currentBalanceTitle.innerHTML = data["balance"];
+                            currentBalanceTitle.innerHTML = data["balance"] + " СМС";
                         else
                             currentBalanceTitle.innerHTML = "не удалось проверить баланс";
                         // Изменение статусов

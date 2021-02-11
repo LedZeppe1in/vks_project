@@ -37,7 +37,7 @@ use yii\bootstrap\ActiveForm;
     <h1><?= Html::encode($this->title) ?></h1><br />
 
     <span><b>Текущий баланс: </b></span>
-    <span id="current-balance" class="badge" style="margin-bottom: 2px;"><?= $currentBalance ?></span><br /><br />
+    <span id="current-balance" class="badge" style="margin-bottom: 2px;"><?= $currentBalance ?> СМС</span><br /><br />
 
     <div class="body-content">
         <?php $form = ActiveForm::begin([

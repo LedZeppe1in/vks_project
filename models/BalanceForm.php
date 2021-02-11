@@ -35,7 +35,7 @@ class BalanceForm extends Model
     public function attributeLabels()
     {
         return [
-            'balance' => 'Запрашиваемый баланс',
+            'balance' => 'Запрашиваемое количество СМС',
             'email' => 'Адрес электронной почты',
         ];
     }
