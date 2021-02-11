@@ -2,6 +2,7 @@
 
 namespace app\controllers;
 
+use app\models\BalanceForm;
 use Yii;
 use DateTime;
 use Exception;
@@ -31,11 +32,12 @@ class SiteController extends Controller
             'access' => [
                 'class' => AccessControl::className(),
                 'only' => ['logout', 'contact', 'checking', 'save-paths', 'get-mailing-list', 'save-message-template',
-                    'notify-employees', 'check-message-status', 'data-synchronization'],
+                    'notify-employees', 'check-message-status', 'data-synchronization', 'balance-replenishment'],
                 'rules' => [
                     [
                         'actions' => ['logout', 'contact', 'checking', 'save-paths', 'get-mailing-list',
-                            'save-message-template', 'notify-employees', 'check-message-status', 'data-synchronization'],
+                            'save-message-template', 'notify-employees', 'check-message-status', 'data-synchronization',
+                            'balance-replenishment'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -812,6 +814,62 @@ class SiteController extends Controller
 
         return $this->render('check-message-status', [
             'model' => $model,
+        ]);
+    }
+
+    /**
+     * Запрос счета на пополнение баланса.
+     *
+     * @return string
+     */
+    public function actionBalanceReplenishment()
+    {
+        // Формирование формы баланса
+        $model = new BalanceForm();
+        // Формирование параметров для POST-запроса к СМС-Органайзеру
+        $parameters = array('login' => NotificationForm::LOGIN, 'passwd' => NotificationForm::PASSWORD);
+        // Отправка POST-запроса СМС-Органайзеру для проверки баланса
+        $handle = curl_init();
+        curl_setopt($handle, CURLOPT_URL,NotificationForm::CHECK_BALANCE_LINK);
+        curl_setopt($handle, CURLOPT_POST, 1);
+        curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
+        curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+        $currentBalance = curl_exec($handle);
+        curl_close ($handle);
+        // Обработка приходящих ошибок
+        if ($currentBalance == -1 && $currentBalance == -2)
+            $currentBalance = 'не определен';
+        // Загрузка и проверка данных с формы при POST-запросе
+        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            // Формирование параметров для POST-запроса к СМС-Органайзеру
+            $parameters = array(
+                'login' => NotificationForm::LOGIN,
+                'passwd' => NotificationForm::PASSWORD,
+                'smscnt' => $model->balance,
+                'email' => $model->email
+            );
+            // Отправка POST-запроса СМС-Органайзеру для запроса счета на пополнение баланса
+            $handle = curl_init();
+            curl_setopt($handle, CURLOPT_URL, BalanceForm::INVOICE_REQUEST_LINK_FOR_PAYMENT);
+            curl_setopt($handle, CURLOPT_POST, 1);
+            curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
+            curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($handle);
+            curl_close($handle);
+
+            // Если запрос счета прошел успешно
+            if (isset($response) && $response != 0 && $response != 1)
+                // Сообщение об успешном запросе счета на пополнение баланса
+                Yii::$app->getSession()->setFlash('success',
+                    'Вы успешно отправили запрос счета на оплату! Письмо с вложением счета в формате PDF придет на указанный Вами адрес.');
+            else
+                // Сообщение об ошибке запроса счета на пополнение баланса
+                Yii::$app->getSession()->setFlash('success', 'При отправке запроса на оплату возникла ошибка!');
+        }
+
+        return $this->render('balance-replenishment', [
+            'model' => $model,
+            'currentBalance' => $currentBalance,
         ]);
     }
 

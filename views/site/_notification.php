@@ -31,7 +31,8 @@ use app\components\GoogleSpreadsheet;
         </div>
 
         <span><b>Текущий баланс: </b></span>
-        <span id="current-balance" class="badge" style="margin-bottom: 2px;"></span><br /><br />
+        <span id="current-balance" class="badge" style="margin-bottom: 2px;"></span>
+            <?= Html::a('Запрос счета на пополнение баланса', ['/site/balance-replenishment']); ?><br /><br />
         <span><b>Объём рассылки: </b></span>
         <span id="mailing-volume" class="badge" style="margin-bottom: 2px;"></span>
 

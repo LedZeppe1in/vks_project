@@ -136,3 +136,8 @@ a.desc:after {
     left: 50%;
     z-index: 50;
 }
+
+.required label:after {
+    content: "*";
+    color: red;
+}

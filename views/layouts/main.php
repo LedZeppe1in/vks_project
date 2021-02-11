@@ -53,6 +53,10 @@ AppAsset::register($this);
                 'url' => ['/site/check-message-status']
             ],
             [
+                'label' => '<span class="glyphicon glyphicon-file"></span> Запрос счета',
+                'url' => ['/site/balance-replenishment']
+            ],
+            [
                 'label' => '<span class="glyphicon glyphicon-bullhorn"></span> Политика конфиденциальности',
                 'url' => ['/site/privacy-policy']
             ],

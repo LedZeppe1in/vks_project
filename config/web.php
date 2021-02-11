@@ -38,6 +38,7 @@ $config = [
                 'notify-employees' => 'site/notify-employees',
                 'check-message-status' => 'site/check-message-status',
                 'data-synchronization' => 'site/data-synchronization',
+                'balance-replenishment' => 'site/balance-replenishment',
             ],
         ],
         'cache' => [
