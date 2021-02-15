@@ -232,12 +232,12 @@ class YandexSpreadsheet
     {
         $rowPositions = array();
         foreach ($googleSpreadsheetRows as $googleRowKey => $googleSpreadsheetRow)
-            foreach ($googleSpreadsheetRow as $googleCellKey => $googleSpreadsheetCell)
-                if ($googleCellKey == 0)
-                    foreach ($yandexSpreadsheetAfterDeletingRows as $yandexRowKey => $yandexSpreadsheetAfterDeletingRow)
-                        foreach ($yandexSpreadsheetAfterDeletingRow as $yandexCellKey => $yandexSpreadsheetCell)
-                            if ($yandexCellKey == 0 && $googleSpreadsheetCell == $yandexSpreadsheetCell)
-                                $rowPositions[$googleRowKey] = $yandexRowKey;
+            foreach ($yandexSpreadsheetAfterDeletingRows as $yandexRowKey => $yandexSpreadsheetAfterDeletingRow)
+                if (isset($googleSpreadsheetRow[0]) && isset($yandexSpreadsheetAfterDeletingRow[0]) &&
+                    isset($googleSpreadsheetRow[1]) && isset($yandexSpreadsheetAfterDeletingRow[1]))
+                    if ($googleSpreadsheetRow[0] == $yandexSpreadsheetAfterDeletingRow[0] &&
+                        $googleSpreadsheetRow[1] == $yandexSpreadsheetAfterDeletingRow[1])
+                        $rowPositions[$googleRowKey] = $yandexRowKey;
         // Чтение Yandex-таблицы
         $reader = IOFactory::createReader("Xlsx");
         $spreadsheet = $reader->load($path . $this->intermediateFileName);
@@ -310,8 +310,8 @@ class YandexSpreadsheet
                                 ->setFillType(Fill::FILL_SOLID)
                                 ->getStartColor()
                                 ->setARGB($currentColor);
+                            $i++;
                         }
-                    $i++;
                 }
             } else {
                 // Добавление новых строк в Yandex-таблицу
