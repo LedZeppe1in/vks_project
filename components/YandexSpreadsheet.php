@@ -230,14 +230,20 @@ class YandexSpreadsheet
      */
     public function addRows($googleSpreadsheetRows, $yandexSpreadsheetAfterDeletingRows, $path)
     {
+        // Поиск и формирование позиции вставки новых строк
         $rowPositions = array();
         foreach ($googleSpreadsheetRows as $googleRowKey => $googleSpreadsheetRow)
             foreach ($yandexSpreadsheetAfterDeletingRows as $yandexRowKey => $yandexSpreadsheetAfterDeletingRow)
                 if (isset($googleSpreadsheetRow[0]) && isset($yandexSpreadsheetAfterDeletingRow[0]) &&
-                    isset($googleSpreadsheetRow[1]) && isset($yandexSpreadsheetAfterDeletingRow[1]))
+                    isset($googleSpreadsheetRow[1]) && isset($yandexSpreadsheetAfterDeletingRow[1])) {
+                    // Запоминание позиции вставки только с датой
+                    if ($googleSpreadsheetRow[0] == $yandexSpreadsheetAfterDeletingRow[0])
+                        $rowPositions[$googleRowKey] = $yandexRowKey;
+                    // Запоминание позиции вставки с датой и адресом
                     if ($googleSpreadsheetRow[0] == $yandexSpreadsheetAfterDeletingRow[0] &&
                         $googleSpreadsheetRow[1] == $yandexSpreadsheetAfterDeletingRow[1])
                         $rowPositions[$googleRowKey] = $yandexRowKey;
+                }
         // Чтение Yandex-таблицы
         $reader = IOFactory::createReader("Xlsx");
         $spreadsheet = $reader->load($path . $this->intermediateFileName);
