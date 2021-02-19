@@ -43,8 +43,10 @@ class YandexSpreadsheet
     public $fileName             = 'yandex-spreadsheet.xlsx';
     // Название промежуточного файла электронной таблицы на сервере
     public $intermediateFileName = 'intermediate-yandex-spreadsheet.xlsx';
-    // Название нового файла электронной таблицы на сервере после обработки
+    // Название нового файла электронной таблицы на сервере после обработки (с пустыми строками)
     public $newFileName          = 'new-yandex-spreadsheet.xlsx';
+    // Название нового файла электронной таблицы на сервере после обработки (без пустых строк)
+    public $resultFileName       = 'result-yandex-spreadsheet.xlsx';
     // Название файла с текущим цветом для подсветки добавленных строк
     public $colorFileName        = 'current-cell-color.txt';
 
@@ -232,18 +234,31 @@ class YandexSpreadsheet
     {
         // Поиск и формирование позиции вставки новых строк
         $rowPositions = array();
-        foreach ($googleSpreadsheetRows as $googleRowKey => $googleSpreadsheetRow)
+        foreach ($googleSpreadsheetRows as $googleRowKey => $googleSpreadsheetRow) {
+            $currentPosition = null;
             foreach ($yandexSpreadsheetAfterDeletingRows as $yandexRowKey => $yandexSpreadsheetAfterDeletingRow)
                 if (isset($googleSpreadsheetRow[0]) && isset($yandexSpreadsheetAfterDeletingRow[0]) &&
                     isset($googleSpreadsheetRow[1]) && isset($yandexSpreadsheetAfterDeletingRow[1])) {
-                    // Запоминание позиции вставки только с датой
-                    if ($googleSpreadsheetRow[0] == $yandexSpreadsheetAfterDeletingRow[0])
-                        $rowPositions[$googleRowKey] = $yandexRowKey;
-                    // Запоминание позиции вставки с датой и адресом
-                    if ($googleSpreadsheetRow[0] == $yandexSpreadsheetAfterDeletingRow[0] &&
-                        $googleSpreadsheetRow[1] == $yandexSpreadsheetAfterDeletingRow[1])
-                        $rowPositions[$googleRowKey] = $yandexRowKey;
+                    // Если у строк из таблиц совпадают даты
+                    if ($googleSpreadsheetRow[0] == $yandexSpreadsheetAfterDeletingRow[0]) {
+                        $googleAddressCode = mb_substr($googleSpreadsheetRow[1], 3, 2);
+                        $yandexAddressCode = mb_substr($yandexSpreadsheetAfterDeletingRow[1], 3, 2);
+                        // Запоминание позиции (если такого адреса еще не было и его код меньше)
+                        if ((int)$googleAddressCode < (int)$yandexAddressCode &&
+                            isset($rowPositions[$googleRowKey]) == false)
+                            $rowPositions[$googleRowKey] = $yandexRowKey - 1;
+                        // Запоминание позиции (если адреса совпадают)
+                        if ((int)$googleAddressCode == (int)$yandexAddressCode)
+                            $rowPositions[$googleRowKey] = $yandexRowKey;
+                        // Запоминание позиции (если такого адреса еще не было и его код больше)
+                        if ((int)$googleAddressCode > (int)$yandexAddressCode)
+                            $currentPosition = $yandexRowKey;
+                    }
                 }
+            // Запоминание позиции для вставки в конец
+            if (isset($rowPositions[$googleRowKey]) == false && isset($foo))
+                $rowPositions[$googleRowKey] = $currentPosition;
+        }
         // Чтение Yandex-таблицы
         $reader = IOFactory::createReader("Xlsx");
         $spreadsheet = $reader->load($path . $this->intermediateFileName);
@@ -361,6 +376,63 @@ class YandexSpreadsheet
     }
 
     /**
+     * Удаление пустых начальных строк из Yandex-таблице.
+     *
+     * @param $path - путь к папке с электронной таблицей на сервере
+     * @throws \Box\Spout\Common\Exception\IOException
+     * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
+     * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
+     * @throws \PhpOffice\PhpSpreadsheet\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
+     */
+    public function deleteEmptyRows($path)
+    {
+        // Массив для номеров строк из Yandex-таблицы, которые необходимо удалить
+        $yandexSpreadsheetDeletedRows = array();
+        // Чтение Yandex-таблицы
+        $reader = ReaderEntityFactory::createReaderFromFile($path . $this->newFileName);
+        $reader->setShouldPreserveEmptyRows(true);
+        $reader->open($path . $this->newFileName);
+        foreach ($reader->getSheetIterator() as $sheet)
+            if ($sheet->getName() === self::FIRST_SHEET_SHEET)
+                foreach ($sheet->getRowIterator() as $rowNumber => $row)
+                    if ($rowNumber > 1) {
+                        $emptyFirstRow = true;
+                        // Обход всех ячеек в строке
+                        foreach ($row->getCells() as $cellNumber => $cell)
+                            // Если ячейки в строке не пустые
+                            if ($cell->getValue() != null) {
+                                $emptyFirstRow = false;
+                                break;
+                            }
+                        // Если текущая строка пустая
+                        if ($emptyFirstRow)
+                            array_push($yandexSpreadsheetDeletedRows, $rowNumber);
+                        else
+                            break;
+                    }
+        $reader->close();
+
+        // Чтение Yandex-таблицы
+        $reader = IOFactory::createReader("Xlsx");
+        $spreadsheet = $reader->load($path . $this->newFileName);
+        $worksheet = $spreadsheet->setActiveSheetIndexByName(self::FIRST_SHEET_SHEET);
+        // Если массив с номерами строк из Yandex-таблицы не пустой
+        if (!empty($yandexSpreadsheetDeletedRows)) {
+            // Удаление строк из Yandex-таблицы
+            $i = 0;
+            foreach ($yandexSpreadsheetDeletedRows as $rowNumber) {
+                $worksheet->removeRow($rowNumber - $i);
+                $i++;
+            }
+        }
+        // Обновление файла Yandex-таблицы
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($path . $this->resultFileName);
+    }
+
+    /**
      * Загрузка нового файла электронной таблицы на Yandex-диск.
      *
      * @param $oauthPath - путь к файлу c токеном для доступа к Yandex-диску
@@ -388,11 +460,11 @@ class YandexSpreadsheet
         // Если нет ошибки
         if (empty($resource['error'])) {
             // Если ошибки нет, то отправляем файл на полученный URL
-            $file = fopen($path . $this->newFileName, 'r');
+            $file = fopen($path . $this->resultFileName, 'r');
             $handle = curl_init($resource['href']);
             curl_setopt($handle, CURLOPT_PUT, true);
             curl_setopt($handle, CURLOPT_UPLOAD, true);
-            curl_setopt($handle, CURLOPT_INFILESIZE, filesize($path . $this->newFileName));
+            curl_setopt($handle, CURLOPT_INFILESIZE, filesize($path . $this->resultFileName));
             curl_setopt($handle, CURLOPT_INFILE, $file);
             curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);

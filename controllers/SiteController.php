@@ -268,6 +268,8 @@ class SiteController extends Controller
                                 $yandexSpreadsheetAfterDeletingRows,
                                 $path
                             );
+                            // Запись нового файла электронной таблицы с удаленными вначале пустыми строками
+                            $yandexSpreadsheet->deleteEmptyRows($path);
                             // Загрузка нового файла электронной таблицы на Yandex-диск
                             $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive(
                                 $yandexOAuthPath,
