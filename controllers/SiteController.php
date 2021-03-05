@@ -247,29 +247,27 @@ class SiteController extends Controller
                         );
                         // Если есть новые строки из Google-таблицы
                         if (!empty($googleSpreadsheetRows) || !empty($yandexSpreadsheetDeletedRows)) {
-                            // Удаление строк из массива всех строк Yandex-таблицы
-                            $yandexSpreadsheetBeforeDeletingRows = $yandexSpreadsheetRows;
-                            foreach ($yandexSpreadsheetBeforeDeletingRows as $key => $yandexSpreadsheetRow)
-                                foreach ($yandexSpreadsheetDeletedRows as $yandexSpreadsheetDeletedRow)
-                                    if ($key == $yandexSpreadsheetDeletedRow)
-                                        unset($yandexSpreadsheetBeforeDeletingRows[$key]);
-                            // Формирование массива строк Yandex-таблицы после удаления из нее строк
-                            $yandexSpreadsheetAfterDeletingRows = array();
-                            $i = 2;
-                            foreach ($yandexSpreadsheetBeforeDeletingRows as $key => $yandexSpreadsheetRow) {
-                                $yandexSpreadsheetAfterDeletingRows[$i] = $yandexSpreadsheetRow;
-                                $i++;
-                            }
-                            // Запись нового файла электронной таблицы с удаленными строками
-                            $yandexSpreadsheet->deleteRows($yandexSpreadsheetDeletedRows, $path);
+//                            // Удаление строк из массива всех строк Yandex-таблицы
+//                            $yandexSpreadsheetBeforeDeletingRows = $yandexSpreadsheetRows;
+//                            foreach ($yandexSpreadsheetBeforeDeletingRows as $key => $yandexSpreadsheetRow)
+//                                foreach ($yandexSpreadsheetDeletedRows as $yandexSpreadsheetDeletedRow)
+//                                    if ($key == $yandexSpreadsheetDeletedRow)
+//                                        unset($yandexSpreadsheetBeforeDeletingRows[$key]);
+//                            // Формирование массива строк Yandex-таблицы после удаления из нее строк
+//                            $yandexSpreadsheetAfterDeletingRows = array();
+//                            $i = 2;
+//                            foreach ($yandexSpreadsheetBeforeDeletingRows as $key => $yandexSpreadsheetRow) {
+//                                $yandexSpreadsheetAfterDeletingRows[$i] = $yandexSpreadsheetRow;
+//                                $i++;
+//                            }
+                            // Запись нового файла электронной таблицы с отмеченными цветом строками в Yandex-таблице
+                            $yandexSpreadsheet->setColorForRows($yandexSpreadsheetDeletedRows, $path);
                             // Запись нового файла электронной таблицы с добавленными недостающими строками
                             $yandexSpreadsheet->addRows(
                                 $googleSpreadsheetRows,
-                                $yandexSpreadsheetAfterDeletingRows,
+                                $yandexSpreadsheetRows,
                                 $path
                             );
-                            // Запись нового файла электронной таблицы с удаленными вначале пустыми строками
-                            $yandexSpreadsheet->deleteEmptyRows($path);
                             // Загрузка нового файла электронной таблицы на Yandex-диск
                             $uploadFlag = $yandexSpreadsheet->uploadSpreadsheetToYandexDrive(
                                 $yandexOAuthPath,

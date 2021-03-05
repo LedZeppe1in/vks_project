@@ -3,6 +3,7 @@
 namespace app\components;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
@@ -30,9 +31,9 @@ class YandexSpreadsheet
     const SURNAME_HEADING     = 'Фамилия';
     const COMMENT_HEADING     = 'Комментарий';
 
-    // Цвета для подсветки добавленных строк
-    const GREEN_COLOR_1 = 'dbead5';
-    const GREEN_COLOR_2 = '7ef87e';
+    // Цвета для подсветки добавленных и удаленных строк
+    const GREEN_COLOR  = 'dbead5';
+    const YELLOW_COLOR = 'fff5a5';
 
     // Название папки с копиями таблиц (лог синхронизации с Yandex-диском)
     const SPREADSHEET_LOG_PATH = '/web/yandex-synchronization-logs/';
@@ -45,10 +46,6 @@ class YandexSpreadsheet
     public $intermediateFileName = 'intermediate-yandex-spreadsheet.xlsx';
     // Название нового файла электронной таблицы на сервере после обработки (с пустыми строками)
     public $newFileName          = 'new-yandex-spreadsheet.xlsx';
-    // Название нового файла электронной таблицы на сервере после обработки (без пустых строк)
-    public $resultFileName       = 'result-yandex-spreadsheet.xlsx';
-    // Название файла с текущим цветом для подсветки добавленных строк
-    public $colorFileName        = 'current-cell-color.txt';
 
     /**
      * Проверка существования файла электронной таблицы на Yandex-диске.
@@ -221,28 +218,61 @@ class YandexSpreadsheet
     }
 
     /**
-     * Добавление недостающих новых строк в Yandex-таблицу.
+     * Установка цвета строк в Yandex-таблице, которые были удалены в Google-таблице.
      *
-     * @param $googleSpreadsheetRows - массив добавляемых строк в Yandex-таблицу
-     * @param $yandexSpreadsheetAfterDeletingRows - массив строк Yandex-таблицы (после синхронизации с Google-таблицей удаления из него строк)
+     * @param $yandexSpreadsheetDeletedRows - массив строк из Yandex-таблицы, которые необходимо отметить цветом
+     * (как удаленные из Google-таблицы)
      * @param $path - путь к папке с электронной таблицей на сервере
      * @throws \PhpOffice\PhpSpreadsheet\Exception
      * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
      * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
      */
-    public function addRows($googleSpreadsheetRows, $yandexSpreadsheetAfterDeletingRows, $path)
+    public function setColorForRows($yandexSpreadsheetDeletedRows, $path)
+    {
+        // Чтение Yandex-таблицы
+        $reader = IOFactory::createReader("Xlsx");
+        $spreadsheet = $reader->load($path . $this->fileName);
+        $worksheet = $spreadsheet->setActiveSheetIndexByName(self::FIRST_SHEET_SHEET);
+        // Если массив с номерами строк из Yandex-таблицы не пустой
+        if (!empty($yandexSpreadsheetDeletedRows)) {
+            // Обход всех строк
+            foreach ($yandexSpreadsheetDeletedRows as $rowNumber) {
+                // Задание цвета ячеек
+                $worksheet->getStyle('A' . $rowNumber . ':L' . $rowNumber)
+                    ->getFill()
+                    ->setFillType(Fill::FILL_SOLID)
+                    ->getStartColor()
+                    ->setARGB(self::YELLOW_COLOR);
+            }
+        }
+        // Обновление файла Yandex-таблицы
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($path . $this->intermediateFileName);
+    }
+
+    /**
+     * Добавление недостающих новых строк в Yandex-таблицу.
+     *
+     * @param $googleSpreadsheetRows - массив добавляемых строк в Yandex-таблицу
+     * @param $yandexSpreadsheetRows - массив всех строк Yandex-таблицы
+     * @param $path - путь к папке с электронной таблицей на сервере
+     * @throws \PhpOffice\PhpSpreadsheet\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
+     */
+    public function addRows($googleSpreadsheetRows, $yandexSpreadsheetRows, $path)
     {
         // Поиск и формирование позиции вставки новых строк
         $rowPositions = array();
         foreach ($googleSpreadsheetRows as $googleRowKey => $googleSpreadsheetRow) {
             $currentPosition = null;
-            foreach ($yandexSpreadsheetAfterDeletingRows as $yandexRowKey => $yandexSpreadsheetAfterDeletingRow)
-                if (isset($googleSpreadsheetRow[0]) && isset($yandexSpreadsheetAfterDeletingRow[0]) &&
-                    isset($googleSpreadsheetRow[1]) && isset($yandexSpreadsheetAfterDeletingRow[1])) {
+            foreach ($yandexSpreadsheetRows as $yandexRowKey => $yandexSpreadsheetRow)
+                if (isset($googleSpreadsheetRow[0]) && isset($yandexSpreadsheetRow[0]) &&
+                    isset($googleSpreadsheetRow[1]) && isset($yandexSpreadsheetRow[1])) {
                     // Если у строк из таблиц совпадают даты
-                    if ($googleSpreadsheetRow[0] == $yandexSpreadsheetAfterDeletingRow[0]) {
+                    if ($googleSpreadsheetRow[0] == $yandexSpreadsheetRow[0]) {
                         $googleAddressCode = mb_substr($googleSpreadsheetRow[1], 3, 2);
-                        $yandexAddressCode = mb_substr($yandexSpreadsheetAfterDeletingRow[1], 3, 2);
+                        $yandexAddressCode = mb_substr($yandexSpreadsheetRow[1], 3, 2);
                         // Запоминание позиции (если такого адреса еще не было и его код меньше)
                         if ((int)$googleAddressCode < (int)$yandexAddressCode &&
                             isset($rowPositions[$googleRowKey]) == false)
@@ -265,36 +295,7 @@ class YandexSpreadsheet
         $worksheet = $spreadsheet->setActiveSheetIndexByName(self::FIRST_SHEET_SHEET);
         // Если массив с найденными строками в Google-таблице не пустой
         if (!empty($googleSpreadsheetRows)) {
-            $currentColor = self::GREEN_COLOR_2;
-            $currentDate = date('d.m.Y');
-            // Если существует файл с цветом для подсветки добавленных строк
-            if (file_exists($path . $this->colorFileName)) {
-                // Получение текущего цвета подсветки добавленных строк из файла
-                $line = 0;
-                $fh = fopen($path . $this->colorFileName, 'r');
-                while (($buffer = fgets($fh)) !== FALSE) {
-                    if ($line == 0)
-                        $currentColor = $buffer;
-                    if ($line == 1)
-                        $currentDate = $buffer;
-                    $line++;
-                }
-                fclose($fh);
-            }
-            // Если файл с цветом для подсветки добавленных строк не существует или
-            // переменная с датой не равна текущей дате
-            if (file_exists($path . $this->colorFileName) == false || $currentDate != date('d.m.Y')) {
-                // Обновление переменной с текущей датой
-                $currentDate = date('d.m.Y');
-                // Смена цвета для подсветки добавленных строк
-                if ($currentColor == self::GREEN_COLOR_1 . PHP_EOL)
-                    $currentColor = self::GREEN_COLOR_2;
-                else
-                    $currentColor = self::GREEN_COLOR_1;
-                // Запись в файл текущего цвета для подсветки добавленных строк
-                file_put_contents($path . $this->colorFileName, $currentColor . PHP_EOL . $currentDate);
-            }
-            //
+            // Если массив с позициями вставок строк не пустой
             if (!empty($rowPositions)) {
                 $i = 1;
                 // Добавление новых строк в Yandex-таблицу
@@ -330,7 +331,7 @@ class YandexSpreadsheet
                                 ->getFill()
                                 ->setFillType(Fill::FILL_SOLID)
                                 ->getStartColor()
-                                ->setARGB($currentColor);
+                                ->setARGB(self::GREEN_COLOR);
                             $i++;
                         }
                 }
@@ -361,75 +362,32 @@ class YandexSpreadsheet
                     $excelEndTimeValue = Date::PHPToExcel($googleSpreadsheetRow[4]);
                     $worksheet->setCellValue('E' . $row, $excelEndTimeValue);
                     $worksheet->setCellValue('F' . $row, $googleSpreadsheetRow[5]);
+                    // Задание границ ячеек
+                    $border = array(
+                        'borders' => array(
+                            'outline' => array(
+                                'borderStyle' => Border::BORDER_THIN,
+                                'color' => array('argb' => '000000'),
+                            ),
+                            'inside' => array(
+                                'borderStyle' => Border::BORDER_THIN,
+                                'color' => array('argb' => '000000'),
+                            ),
+                        ),
+                    );
+                    $worksheet->getStyle('A' . $row . ':L' . $row)->applyFromArray($border);
                     // Задание цвета ячеек
                     $worksheet->getStyle('A' . $row . ':L' . $row)
                         ->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
-                        ->setARGB($currentColor);
+                        ->setARGB(self::GREEN_COLOR);
                 }
             }
         }
         // Обновление файла Yandex-таблицы
         $writer = new Xlsx($spreadsheet);
         $writer->save($path . $this->newFileName);
-    }
-
-    /**
-     * Удаление пустых начальных строк из Yandex-таблице.
-     *
-     * @param $path - путь к папке с электронной таблицей на сервере
-     * @throws \Box\Spout\Common\Exception\IOException
-     * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
-     * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
-     * @throws \PhpOffice\PhpSpreadsheet\Exception
-     * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
-     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
-     */
-    public function deleteEmptyRows($path)
-    {
-        // Массив для номеров строк из Yandex-таблицы, которые необходимо удалить
-        $yandexSpreadsheetDeletedRows = array();
-        // Чтение Yandex-таблицы
-        $reader = ReaderEntityFactory::createReaderFromFile($path . $this->newFileName);
-        $reader->setShouldPreserveEmptyRows(true);
-        $reader->open($path . $this->newFileName);
-        foreach ($reader->getSheetIterator() as $sheet)
-            if ($sheet->getName() === self::FIRST_SHEET_SHEET)
-                foreach ($sheet->getRowIterator() as $rowNumber => $row)
-                    if ($rowNumber > 1) {
-                        $emptyFirstRow = true;
-                        // Обход всех ячеек в строке
-                        foreach ($row->getCells() as $cellNumber => $cell)
-                            // Если ячейки в строке не пустые
-                            if ($cell->getValue() != null) {
-                                $emptyFirstRow = false;
-                                break;
-                            }
-                        // Если текущая строка пустая
-                        if ($emptyFirstRow)
-                            array_push($yandexSpreadsheetDeletedRows, $rowNumber);
-                        else
-                            break;
-                    }
-        $reader->close();
-
-        // Чтение Yandex-таблицы
-        $reader = IOFactory::createReader("Xlsx");
-        $spreadsheet = $reader->load($path . $this->newFileName);
-        $worksheet = $spreadsheet->setActiveSheetIndexByName(self::FIRST_SHEET_SHEET);
-        // Если массив с номерами строк из Yandex-таблицы не пустой
-        if (!empty($yandexSpreadsheetDeletedRows)) {
-            // Удаление строк из Yandex-таблицы
-            $i = 0;
-            foreach ($yandexSpreadsheetDeletedRows as $rowNumber) {
-                $worksheet->removeRow($rowNumber - $i);
-                $i++;
-            }
-        }
-        // Обновление файла Yandex-таблицы
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($path . $this->resultFileName);
     }
 
     /**
@@ -460,11 +418,11 @@ class YandexSpreadsheet
         // Если нет ошибки
         if (empty($resource['error'])) {
             // Если ошибки нет, то отправляем файл на полученный URL
-            $file = fopen($path . $this->resultFileName, 'r');
+            $file = fopen($path . $this->newFileName, 'r');
             $handle = curl_init($resource['href']);
             curl_setopt($handle, CURLOPT_PUT, true);
             curl_setopt($handle, CURLOPT_UPLOAD, true);
-            curl_setopt($handle, CURLOPT_INFILESIZE, filesize($path . $this->resultFileName));
+            curl_setopt($handle, CURLOPT_INFILESIZE, filesize($path . $this->newFileName));
             curl_setopt($handle, CURLOPT_INFILE, $file);
             curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
