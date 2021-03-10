@@ -268,7 +268,8 @@ class YandexSpreadsheet
             $currentPosition = null;
             foreach ($yandexSpreadsheetRows as $yandexRowKey => $yandexSpreadsheetRow)
                 if (isset($googleSpreadsheetRow[0]) && isset($yandexSpreadsheetRow[0]) &&
-                    isset($googleSpreadsheetRow[1]) && isset($yandexSpreadsheetRow[1])) {
+                    isset($googleSpreadsheetRow[1]) && isset($yandexSpreadsheetRow[1]) &&
+                    isset($googleSpreadsheetRow[2]) && isset($yandexSpreadsheetRow[2])) {
                     // Если у строк из таблиц совпадают даты
                     if ($googleSpreadsheetRow[0] == $yandexSpreadsheetRow[0]) {
                         $googleAddressCode = mb_substr($googleSpreadsheetRow[1], 3, 2);
@@ -279,7 +280,8 @@ class YandexSpreadsheet
                             $rowPositions[$googleRowKey] = $yandexRowKey - 1;
                         // Запоминание позиции (если адреса совпадают)
                         if ((int)$googleAddressCode == (int)$yandexAddressCode)
-                            $rowPositions[$googleRowKey] = $yandexRowKey;
+                            if ($googleSpreadsheetRow[2] == $yandexSpreadsheetRow[2])
+                                $rowPositions[$googleRowKey] = $yandexRowKey;
                         // Запоминание позиции (если такого адреса еще не было и его код больше)
                         if ((int)$googleAddressCode > (int)$yandexAddressCode)
                             $currentPosition = $yandexRowKey;
