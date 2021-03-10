@@ -366,8 +366,8 @@ class GoogleSpreadsheet
                                     if ($yandexSpreadsheetRow[0] == $googleSpreadsheetRow[0] &&
                                         $yandexSpreadsheetRow[1] == $googleSpreadsheetRow[1] &&
                                         $yandexSpreadsheetRow[2] == $googleSpreadsheetRow[2] &&
-                                        $yandexSpreadsheetRow[3] == $googleSpreadsheetRow[3] &&
-                                        $yandexSpreadsheetRow[4] == $googleSpreadsheetRow[4])
+                                        $yandexSpreadsheetRow[3]->format('H:i:s') == $googleSpreadsheetRow[3]->format('H:i:s') &&
+                                        $yandexSpreadsheetRow[4]->format('H:i:s') == $googleSpreadsheetRow[4]->format('H:i:s'))
                                         $equality = true;
                             // Если совпадения нет, то добавление текущей строки в массив
                             if ($equality == false)
@@ -383,8 +383,9 @@ class GoogleSpreadsheet
                 if ($yRow[0] != null && $yRow[1] != null && $yRow[2] != null && $yRow[3] != null && $yRow[4] != null) {
                     $equality = false;
                     foreach ($allGoogleSpreadsheetRows as $gRow)
-                        if ($yRow[0] == $gRow[0] && $yRow[1] == $gRow[1] && $yRow[2] == $gRow[2]
-                            && $yRow[3] == $gRow[3] && $yRow[4] == $gRow[4])
+                        if ($yRow[0] == $gRow[0] && $yRow[1] == $gRow[1] && $yRow[2] == $gRow[2] &&
+                            $yRow[3]->format('H:i:s') == $gRow[3]->format('H:i:s') &&
+                            $yRow[4]->format('H:i:s') == $gRow[4]->format('H:i:s'))
                             $equality = true;
                     if ($equality == false)
                         array_push($yandexSpreadsheetDeletedRows, $yKey);
