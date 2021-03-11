@@ -49,7 +49,7 @@ class NotificationForm extends Model
     public function attributeLabels()
     {
         return [
-            'messageTemplate' => 'Шаблон текста сообщения',
+            'messageTemplate' => 'Шаблон текста сообщения (возможные подстановки: <ДАТА; ВРЕМЯ>, <АДРЕС ТОРГОВОЙ ТОЧКИ>, <ВИД РАБОТ>)',
         ];
     }
 }

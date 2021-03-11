@@ -623,6 +623,63 @@ class SiteController extends Controller
     }
 
     /**
+     * Формирование объема рассылки для выбранных пользователей.
+     *
+     * @return false|\yii\console\Response|Response
+     * @throws Exception
+     */
+    public function actionGetMailingVolume()
+    {
+        // Ajax-запрос
+        if (Yii::$app->request->isAjax) {
+            // Определение массива возвращаемых данных
+            $data = array();
+            // Установка формата JSON для возвращаемых данных
+            $response = Yii::$app->response;
+            $response->format = Response::FORMAT_JSON;
+            // Получение списка сотрудников для оповещения
+            $employees = json_decode(Yii::$app->request->post('employees'));
+            // Переменная для хранения сообщений для всех сотрудников из списка оповещения
+            $allMessages = '';
+            // Если существует файл с текстом шаблона сообщения, то определяем значение поля текста с этого файла
+            if (file_exists(Yii::$app->basePath . '/web/' . NotificationForm::MESSAGE_TEMPLATE_FILE_NAME)) {
+                // Получение текста шаблона сообщения
+                $messageTemplate = file_get_contents(Yii::$app->basePath . '/web/' .
+                    NotificationForm::MESSAGE_TEMPLATE_FILE_NAME);
+                // Обход всех сотрудников из списка оповещения
+                foreach ($employees as $employee) {
+                    // Массив поисковых маркеров в тексте
+                    $search = array(
+                        NotificationForm::DATETIME_MARKER,
+                        NotificationForm::ADDRESS_MARKER,
+                        NotificationForm::WORK_TYPE_MARKER
+                    );
+                    // Формирование даты и времени
+                    $date = new DateTime($employee[3]->date);
+                    $startTime = new DateTime($employee[4]->date);
+                    $endTime = new DateTime($employee[5]->date);
+                    $dateTime = $date->format('d.m.Y') . '; ' . $startTime->format('H:i') . '-' .
+                        $endTime->format('H:i');
+                    // Массив замены
+                    $replace = array($dateTime, $employee[6], $employee[7]);
+                    // Формирование конкретного сообщения из шаблона путем замены подстрок
+                    $message = str_replace($search, $replace, $messageTemplate);
+                    // Запоминание текущего текста сообщения
+                    $allMessages .= $message;
+                }
+            }
+            // Формирование объема рассылки
+            $data['mailingVolume'] = round(strlen($allMessages) / 67);
+            // Возвращение данных
+            $response->data = $data;
+
+            return $response;
+        }
+
+        return false;
+    }
+
+    /**
      * Оповещение сотрудников.
      *
      * @return bool|\yii\console\Response|Response

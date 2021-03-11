@@ -34,6 +34,7 @@ $config = [
                 'checking' => 'site/checking',
                 'save-paths' => 'site/save-paths',
                 'get-mailing-list' => 'site/get-mailing-list',
+                'get-mailing-volume' => 'site/get-mailing-volume',
                 'save-message-template' => 'site/save-message-template',
                 'notify-employees' => 'site/notify-employees',
                 'check-message-status' => 'site/check-message-status',

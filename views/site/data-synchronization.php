@@ -16,6 +16,48 @@ use yii\bootstrap\Tabs;
 
 <!-- JS-скрипт -->
 <script type="text/javascript">
+    // Переменная для хранения общего объема рассылки
+    let fullMailingVolume;
+    // Переменная для хранения списка сотрудников
+    let employees;
+
+    // Обработка выбора общего чекбокса в GridView
+    function checkAllEmployees(item_id, checked) {
+        // Слой с отображением объема рассылки для выбранных сотрудников
+        let customMailingVolumeTitle = document.getElementById("custom-mailing-volume");
+        // Определение состояния чекбокса
+        if (checked === true)
+            customMailingVolumeTitle.innerHTML = fullMailingVolume;
+        else
+            customMailingVolumeTitle.innerHTML = "0";
+    }
+
+    // Обработка выбора индивидуального чекбокса в GridView
+    function checkEmployee(item_id, checked) {
+        // Формирование массива с выбранными сотрудниками
+        let checked_employees = [];
+        employees.forEach(function(item, i) {
+            if (document.querySelectorAll("input[type='checkbox']")[i + 1].checked)
+                checked_employees.push(item);
+        });
+        // Ajax-запрос
+        $.ajax({
+            url: "<?= Yii::$app->request->baseUrl . '/get-mailing-volume' ?>",
+            type: "post",
+            data: "employees=" + JSON.stringify(checked_employees),
+            dataType: "json",
+            success: function(data) {
+                // Слой с отображением объема рассылки для выбранных сотрудников
+                let customMailingVolumeTitle = document.getElementById("custom-mailing-volume");
+                // Отображение текущего объема рассылки для выбранных сотрудников
+                customMailingVolumeTitle.innerHTML = data["mailingVolume"];
+            },
+            error: function() {
+                alert("Непредвиденная ошибка!");
+            }
+        });
+    }
+
     // Выполнение скрипта при загрузке страницы
     $(document).ready(function() {
         // Обработка появления индикатора прогресса
@@ -63,12 +105,12 @@ use yii\bootstrap\Tabs;
         let saveFileSuccessMessage = document.getElementById("save-file-success-message");
         // Сообщение об успешном оповещении сотрудников
         let notificationSuccessMessage = document.getElementById("notification-success-message");
+        // Сообщение о не выбранных сотрудниках
+        let notificationWarningMessage = document.getElementById("notification-warning-message");
         // Слой с отображением текущего баланса
         let currentBalanceTitle = document.getElementById("current-balance");
-        // Слой с отображением объема рассылки
-        let mailingVolumeTitle = document.getElementById("mailing-volume");
-        // Переменная для хранения списка сотрудников
-        let employees;
+        // Слой с отображением общего объема рассылки для всех сотрудников
+        let fullMailingVolumeTitle = document.getElementById("full-mailing-volume");
 
         // Обработка нажатия кнопки проверки
         $("#checking-button").click(function(e) {
@@ -255,7 +297,7 @@ use yii\bootstrap\Tabs;
                         $("#cloud-drive-form .error-summary").hide();
                         // Если ошибки при копировании электронной таблицы Google нет
                         if (!data["copyError"]) {
-                            // Если список сотрудников для оповещения не сформирован
+                            // Если список сотрудников для оповещения сформирован
                             if (data["employees"].length !== 0) {
                                 // Присваивание значениям скрытых полей значений из формы CloudDriveForm
                                 document.getElementById("pjax-google-file-link-input").value =
@@ -273,8 +315,9 @@ use yii\bootstrap\Tabs;
                                     currentBalanceTitle.innerHTML = data["balance"] + " СМС";
                                 else
                                     currentBalanceTitle.innerHTML = "не удалось проверить баланс";
-                                // Формирование информации об объеме рассылки
-                                mailingVolumeTitle.innerHTML = data["mailingVolume"];
+                                // Формирование информации об общем объеме рассылки для всех сотрудников
+                                fullMailingVolume = data["mailingVolume"]
+                                fullMailingVolumeTitle.innerHTML = fullMailingVolume;
                             } else {
                                 // Активация слоя с сообщением о не успешном формировании списка сотрудников для оповещения
                                 employeesWarningMessage.style.display = "block";
@@ -370,6 +413,7 @@ use yii\bootstrap\Tabs;
                         saveFileSuccessMessage.style.display = "block";
                         // Деактивация всех слоев с сообщениями
                         notificationSuccessMessage.style.display = "none";
+                        notificationWarningMessage.style.display = "none";
                         // Скрытие индикатора прогресса
                         $("#overlay").hide();
                         spinner.stop(target);
@@ -377,6 +421,7 @@ use yii\bootstrap\Tabs;
                         // Деактивация всех слоев с сообщениями
                         saveFileSuccessMessage.style.display = "none";
                         notificationSuccessMessage.style.display = "none";
+                        notificationWarningMessage.style.display = "none";
                         // Отображение ошибок ввода
                         viewErrors("#notification-form", data);
                         // Скрытие индикатора прогресса
@@ -399,19 +444,36 @@ use yii\bootstrap\Tabs;
             e.preventDefault();
             // Форма с полем шаблона текста сообщения
             let form = $("#notification-form");
+            // Формирование массива с выбранными сотрудниками
+            var checked_employees = [];
+            employees.forEach(function(item, i) {
+                if (document.querySelectorAll("input[type='checkbox']")[i + 1].checked)
+                    checked_employees.push(item);
+            });
+            console.log(checked_employees);
             // Ajax-запрос
             $.ajax({
                 url: "<?= Yii::$app->request->baseUrl . '/notify-employees' ?>",
                 type: "post",
-                data: form.serialize() + "&employees=" + JSON.stringify(employees),
+                data: form.serialize() + "&employees=" + JSON.stringify(checked_employees),
                 dataType: "json",
                 success: function(data) {
                     // Если валидация прошла успешно (нет ошибок ввода)
                     if (data["success"]) {
                         // Скрытие списка ошибок ввода
                         $("#notification-form .error-summary").hide();
-                        // Активация слоя с сообщением об успешном сохранении файла с текстом шаблона сообщения
-                        notificationSuccessMessage.style.display = "block";
+                        //
+                        console.log(data["smsoResponse"]);
+                        // Если нет сотрудников для оповещения
+                        if (data["smsoResponse"].length !== 0) {
+                            // Активация слоя с сообщением об успешной отправке сообщений сотрудникам
+                            notificationSuccessMessage.style.display = "block";
+                            notificationWarningMessage.style.display = "none";
+                        } else {
+                            // Активация слоя с сообщением о не выбранных сотрудниках
+                            notificationSuccessMessage.style.display = "none";
+                            notificationWarningMessage.style.display = "block";
+                        }
                         // Деактивация всех слоев с сообщениями
                         saveFileSuccessMessage.style.display = "none";
                         // Если нет ошибок, то вывод текущего баланса
@@ -427,12 +489,11 @@ use yii\bootstrap\Tabs;
                         // Скрытие индикатора прогресса
                         $("#overlay").hide();
                         spinner.stop(target);
-                        //
-                        console.log(data["smsoResponse"]);
                     } else {
                         // Деактивация всех слоев с сообщениями
                         saveFileSuccessMessage.style.display = "none";
                         notificationSuccessMessage.style.display = "none";
+                        notificationWarningMessage.style.display = "none";
                         // Отображение ошибок ввода
                         viewErrors("#notification-form", data);
                         // Скрытие индикатора прогресса

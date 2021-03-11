@@ -27,14 +27,23 @@ use app\components\GoogleSpreadsheet;
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
-            <strong>Оповещение прошло успешно!</strong> Вы успешно оповестили всех сотрудников из списка.
+            <strong>Оповещение прошло успешно!</strong> Вы успешно оповестили всех выбранных сотрудников из списка.
+        </div>
+
+        <div id="notification-warning-message" class="alert alert-warning alert-dismissible" role="alert" style="display: none">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <strong>Внимание!</strong> Сотрудники для оповещения не выбраны.
         </div>
 
         <span><b>Текущий баланс: </b></span>
         <span id="current-balance" class="badge" style="margin-bottom: 2px;"></span>
             <?= Html::a('Запрос счета на пополнение баланса', ['/site/balance-replenishment']); ?><br /><br />
-        <span><b>Объём рассылки: </b></span>
-        <span id="mailing-volume" class="badge" style="margin-bottom: 2px;"></span>
+        <span><b>Общий объём рассылки для всех сотрудников: </b></span>
+        <span id="full-mailing-volume" class="badge" style="margin-bottom: 2px;"></span><br /><br />
+        <span><b>Объём рассылки для выбранных сотрудников: </b></span>
+        <span id="custom-mailing-volume" class="badge" style="margin-bottom: 2px;">0</span>
 
         <h3>Оповещение сотрудников:</h3>
 
@@ -49,7 +58,7 @@ use app\components\GoogleSpreadsheet;
 
             <div class="form-group">
                 <?= Button::widget([
-                    'label' => '<span class="glyphicon glyphicon-bell"></span> Оповестить',
+                    'label' => '<span class="glyphicon glyphicon-bell"></span> Оповестить выбранных сотрудников',
                     'encodeLabel' => false,
                     'options' => [
                         'id' => 'notification-button',
@@ -71,10 +80,20 @@ use app\components\GoogleSpreadsheet;
         <h3>Список сотрудников для оповещения:</h3>
 
         <?php Pjax::begin(['id' => 'pjaxGrid']); ?>
+
             <?= GridView::widget([
                 'dataProvider' => $employees,
                 'id' => 'employees-list',
                 'columns' => [
+                    [
+                        'class' => 'yii\grid\CheckboxColumn',
+                        'header' => Html::checkBox('selection_all', false, [
+                            'id' => 'select-all-employees',
+                            'class' => 'select-on-check-all',
+                            'onclick' => 'js:checkAllEmployees(this.value, this.checked)'
+                        ]),
+                        'checkboxOptions' => ['onclick' => 'js:checkEmployee(this.value, this.checked)']
+                    ],
                     ['class' => 'yii\grid\SerialColumn'],
                     [
                         'label' => 'ФИО',

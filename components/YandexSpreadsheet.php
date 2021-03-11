@@ -278,8 +278,9 @@ class YandexSpreadsheet
                         if ((int)$googleAddressCode < (int)$yandexAddressCode &&
                             isset($rowPositions[$googleRowKey]) == false)
                             $rowPositions[$googleRowKey] = $yandexRowKey - 1;
-                        // Запоминание позиции (если адреса совпадают)
+                        // Если адреса совпадают
                         if ((int)$googleAddressCode == (int)$yandexAddressCode)
+                            // Запоминание позиции (если виды работ совпадают)
                             if ($googleSpreadsheetRow[2] == $yandexSpreadsheetRow[2])
                                 $rowPositions[$googleRowKey] = $yandexRowKey;
                         // Запоминание позиции (если такого адреса еще не было и его код больше)
