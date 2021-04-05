@@ -122,7 +122,7 @@ class GoogleSpreadsheet
      * @param $session - текущая сессия пользователя
      * @param $fileId - id файла электронной таблицы на Google-диске
      * @param $yandexSpreadsheetRows - массив найденных строк с табельными номерами из Yandex-таблицы для обновления
-     * @return bool - успешность загрузки файла
+     * @return array - массив: успешность выполнения записи, текст сообщения
      * @throws \Google_Exception
      */
     function writeSpreadsheetDataToGoogleDrive($oauthPath, $session, $fileId, $yandexSpreadsheetRows)
@@ -149,25 +149,31 @@ class GoogleSpreadsheet
         $client->setAccessToken($session->get('upload_token'));
         // Если токен установлен
         if ($client->getAccessToken()) {
-            // Если передан id файла электронной таблицы на Google-диске и
-            // массив с найденными строками в Yandex-таблице не пустой
-            if ($fileId != null && !empty($yandexSpreadsheetRows)) {
-                $service = new Google_Service_Sheets($client);
-                // Обновление строк в Google-таблице (подстановка табельных номеров)
-                foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {
-                    $body = new Google_Service_Sheets_ValueRange(['values' => [[$yandexSpreadsheetRow[6]]]]);
-                    $service->spreadsheets_values->update(
-                        $fileId,
-                        self::REQUESTS_SHEET . '!K' . $googleSpreadsheetKey,
-                        $body,
-                        ['valueInputOption' => 'RAW']
-                    );
+            try {
+                // Если передан id файла электронной таблицы на Google-диске и
+                // массив с найденными строками в Yandex-таблице не пустой
+                if ($fileId != null && !empty($yandexSpreadsheetRows)) {
+                    $service = new Google_Service_Sheets($client);
+                    // Обновление строк в Google-таблице (подстановка табельных номеров)
+                    foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {
+                        $body = new Google_Service_Sheets_ValueRange(['values' => [[$yandexSpreadsheetRow[6]]]]);
+                        $service->spreadsheets_values->update(
+                            $fileId,
+                            self::REQUESTS_SHEET . '!K' . $googleSpreadsheetKey,
+                            $body,
+                            ['valueInputOption' => 'RAW']
+                        );
+                        // Ожидание в 0,5 секунды
+                        usleep(250000);
+                    }
                 }
-            }
 
-            return true;
+                return [true, 'Синхронизация прошла успешно!'];
+            } catch (Exception $e) {
+                return [false, 'Ошибка синхронизации! Привышена квота для записи на Google-диск.'];
+            }
         } else
-            return false;
+            return [false, 'Ошибка синхронизации! При загрузке файла электронной таблицы на Google-диск возникла ошибка.'];
     }
 
     /**

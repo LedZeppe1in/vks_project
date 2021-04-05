@@ -366,38 +366,38 @@ class SiteController extends Controller
                                 $yandexSpreadsheetRows
                             );
                             // Если нет ошибки при записи электронной таблицы на Google-диск
-                            if ($uploadFlag) {
-                                // Формирование массива добавленных строк для вывода на экран
-                                $yandexArray = array();
-                                foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {
-                                    $arrayRow = array();
-                                    foreach ($yandexSpreadsheetRow as $key => $yandexSpreadsheetCell) {
-                                        if ($key == 0)
-                                            array_push($arrayRow, $yandexSpreadsheetCell->format('d.m.Y'));
-                                        if ($key == 1 || $key == 2 || $key == 5 || $key == 6 || $key == 7)
-                                            array_push($arrayRow, $yandexSpreadsheetCell);
-                                        if ($key == 3 || $key == 4)
-                                            array_push($arrayRow, $yandexSpreadsheetCell->format('H:i'));
+                            if (isset($uploadFlag[0]) && isset($uploadFlag[1]))
+                                if ($uploadFlag[0] === true) {
+                                    // Формирование массива добавленных строк для вывода на экран
+                                    $yandexArray = array();
+                                    foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {
+                                        $arrayRow = array();
+                                        foreach ($yandexSpreadsheetRow as $key => $yandexSpreadsheetCell) {
+                                            if ($key == 0)
+                                                array_push($arrayRow, $yandexSpreadsheetCell->format('d.m.Y'));
+                                            if ($key == 1 || $key == 2 || $key == 5 || $key == 6 || $key == 7)
+                                                array_push($arrayRow, $yandexSpreadsheetCell);
+                                            if ($key == 3 || $key == 4)
+                                                array_push($arrayRow, $yandexSpreadsheetCell->format('H:i'));
+                                        }
+                                        array_push($arrayRow, $googleSpreadsheetKey);
+                                        array_push($yandexArray, $arrayRow);
                                     }
-                                    array_push($arrayRow, $googleSpreadsheetKey);
-                                    array_push($yandexArray, $arrayRow);
-                                }
-                                $dataProvider = new ArrayDataProvider([
-                                    'allModels' => $yandexArray,
-                                    'pagination' => [
-                                        'pageSize' => 10000,
-                                    ],
-                                ]);
-                                // Сообщение об успешной синхронизации
-                                Yii::$app->getSession()->setFlash('success', 'Синхронизация прошла успешно!');
+                                    $dataProvider = new ArrayDataProvider([
+                                        'allModels' => $yandexArray,
+                                        'pagination' => [
+                                            'pageSize' => 10000,
+                                        ],
+                                    ]);
+                                    // Сообщение об успешной синхронизации
+                                    Yii::$app->getSession()->setFlash('success', $uploadFlag[1]);
 
-                                return $this->render('google-synchronization', [
-                                    'dataProvider' => $dataProvider
-                                ]);
-                            } else
-                                // Сообщение об ошибке синхронизации
-                                Yii::$app->getSession()->setFlash('error',
-                                    'Ошибка синхронизации! При загрузке файла электронной таблицы на Google-диск возникла ошибка.');
+                                    return $this->render('google-synchronization', [
+                                        'dataProvider' => $dataProvider
+                                    ]);
+                                } else
+                                    // Сообщение об ошибке синхронизации
+                                    Yii::$app->getSession()->setFlash('error', $uploadFlag[1]);
                         } else
                             // Сообщение о том, что синхронизация не требуется
                             Yii::$app->getSession()->setFlash('warning',
