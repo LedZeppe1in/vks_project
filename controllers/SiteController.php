@@ -247,19 +247,6 @@ class SiteController extends Controller
                         );
                         // Если есть новые строки из Google-таблицы
                         if (!empty($googleSpreadsheetRows) || !empty($yandexSpreadsheetDeletedRows)) {
-//                            // Удаление строк из массива всех строк Yandex-таблицы
-//                            $yandexSpreadsheetBeforeDeletingRows = $yandexSpreadsheetRows;
-//                            foreach ($yandexSpreadsheetBeforeDeletingRows as $key => $yandexSpreadsheetRow)
-//                                foreach ($yandexSpreadsheetDeletedRows as $yandexSpreadsheetDeletedRow)
-//                                    if ($key == $yandexSpreadsheetDeletedRow)
-//                                        unset($yandexSpreadsheetBeforeDeletingRows[$key]);
-//                            // Формирование массива строк Yandex-таблицы после удаления из нее строк
-//                            $yandexSpreadsheetAfterDeletingRows = array();
-//                            $i = 2;
-//                            foreach ($yandexSpreadsheetBeforeDeletingRows as $key => $yandexSpreadsheetRow) {
-//                                $yandexSpreadsheetAfterDeletingRows[$i] = $yandexSpreadsheetRow;
-//                                $i++;
-//                            }
                             // Запись нового файла электронной таблицы с отмеченными цветом строками в Yandex-таблице
                             $yandexSpreadsheet->setColorForRows($yandexSpreadsheetDeletedRows, $path);
                             // Запись нового файла электронной таблицы с добавленными недостающими строками
@@ -280,16 +267,17 @@ class SiteController extends Controller
                                 copy($path . $yandexSpreadsheet->newFileName, $dstYandexFile);
                                 // Формирование массива удаленных строк для вывода на экран
                                 $yandexArray = array();
-                                foreach ($yandexSpreadsheetRows as $foo => $yandexSpreadsheetRow)
+                                foreach ($yandexSpreadsheetRows as $keyRow => $yandexSpreadsheetRow)
                                     foreach ($yandexSpreadsheetDeletedRows as $rowNumber)
-                                        if ($foo == $rowNumber) {
+                                        if ($keyRow == $rowNumber) {
                                             $arrayRow = array();
-                                            foreach ($yandexSpreadsheetRow as $key => $yandexSpreadsheetCell) {
-                                                if ($key == 0)
+                                            foreach ($yandexSpreadsheetRow as $keyCell => $yandexSpreadsheetCell) {
+                                                if ($keyCell == 0 && $yandexSpreadsheetCell != null)
                                                     array_push($arrayRow, $yandexSpreadsheetCell->format('d.m.Y'));
-                                                if ($key == 1 || $key == 2)
+                                                if ($keyCell == 1 || $keyCell == 2)
                                                     array_push($arrayRow, $yandexSpreadsheetCell);
-                                                if ($key == 3 || $key == 4)
+                                                if (($keyCell == 3 && $yandexSpreadsheetCell != null) ||
+                                                    ($keyCell == 4 && $yandexSpreadsheetCell != null))
                                                     array_push($arrayRow, $yandexSpreadsheetCell->format('H:i'));
                                             }
                                             array_push($yandexArray, $arrayRow);
@@ -338,12 +326,11 @@ class SiteController extends Controller
                         break;
                     // Если нажата кнопка синхронизации с Google-диском
                     case 'google-synchronization':
-                        // Создание директории для результирующей Google-таблицы на сервере в папке логов
+                        // Создание директории для логов
                         $googleLogPath = Yii::$app->basePath . GoogleSpreadsheet::SPREADSHEET_LOG_PATH .
                             date("d.m.Y H:i:s") . '/';
-                        $dstGoogleFile = $googleLogPath . $googleSpreadsheet->newFileName;
-                        if (!file_exists($dstGoogleFile))
-                            mkdir(dirname($dstGoogleFile), 0777, true);
+                        if (!file_exists($googleLogPath))
+                            mkdir($googleLogPath, 0777, true);
                         // Копирование исходной Google-таблицы на сервер в папку логов
                         $googleSpreadsheet->copySpreadsheetToServer(
                             $googleOAuthPath,
@@ -380,8 +367,6 @@ class SiteController extends Controller
                             );
                             // Если нет ошибки при записи электронной таблицы на Google-диск
                             if ($uploadFlag) {
-                                // Копирование результирующей Google-таблицы на сервер в папку логов
-                                copy($path . $googleSpreadsheet->newFileName, $dstGoogleFile);
                                 // Формирование массива добавленных строк для вывода на экран
                                 $yandexArray = array();
                                 foreach ($yandexSpreadsheetRows as $googleSpreadsheetKey => $yandexSpreadsheetRow) {

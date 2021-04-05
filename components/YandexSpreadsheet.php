@@ -175,7 +175,7 @@ class YandexSpreadsheet
                         $spreadsheetRow = array();
                         foreach ($row->getCells() as $cellNumber => $cell)
                             if ($cellNumber == 0 || $cellNumber == 1 || $cellNumber == 2 ||
-                                $cellNumber == 3 || $cellNumber == 4)
+                                $cellNumber == 3 || $cellNumber == 4 || $cellNumber == 11)
                                 array_push($spreadsheetRow, $cell->getValue());
                         // Если массив дат пуст или если текущая дата в строке входит в диапозон дат выборки
                         if (isset($spreadsheetRow[0]))
@@ -262,10 +262,12 @@ class YandexSpreadsheet
      */
     public function addRows($googleSpreadsheetRows, $yandexSpreadsheetRows, $path)
     {
-        // Поиск и формирование позиции вставки новых строк
+        // Массив для позиций вставки строк
         $rowPositions = array();
+        // Поиск и формирование позиции вставки новых строк
         foreach ($googleSpreadsheetRows as $googleRowKey => $googleSpreadsheetRow) {
             $currentPosition = null;
+            $matchAddress = false;
             foreach ($yandexSpreadsheetRows as $yandexRowKey => $yandexSpreadsheetRow)
                 if (isset($googleSpreadsheetRow[0]) && isset($yandexSpreadsheetRow[0]) &&
                     isset($googleSpreadsheetRow[1]) && isset($yandexSpreadsheetRow[1]) &&
@@ -279,18 +281,27 @@ class YandexSpreadsheet
                             isset($rowPositions[$googleRowKey]) == false)
                             $rowPositions[$googleRowKey] = $yandexRowKey - 1;
                         // Если адреса совпадают
-                        if ((int)$googleAddressCode == (int)$yandexAddressCode)
+                        if ((int)$googleAddressCode == (int)$yandexAddressCode) {
                             // Запоминание позиции (если виды работ совпадают)
-                            if ($googleSpreadsheetRow[2] == $yandexSpreadsheetRow[2])
+                            if ($googleSpreadsheetRow[2] == $yandexSpreadsheetRow[2]) {
                                 $rowPositions[$googleRowKey] = $yandexRowKey;
+                                $matchAddress = true;
+                            }
+                            // Запоминание позиции пока виды работ не совпадут
+                            if ($matchAddress == false)
+                                $rowPositions[$googleRowKey] = $yandexRowKey;
+                        }
                         // Запоминание позиции (если такого адреса еще не было и его код больше)
                         if ((int)$googleAddressCode > (int)$yandexAddressCode)
                             $currentPosition = $yandexRowKey;
                     }
                 }
-            // Запоминание позиции для вставки в конец
-            if (isset($rowPositions[$googleRowKey]) == false && isset($foo))
+            // Запоминание позиции для вставки в конец (если была дата)
+            if (isset($rowPositions[$googleRowKey]) == false && $currentPosition != null)
                 $rowPositions[$googleRowKey] = $currentPosition;
+            // Запоминание позиции для вставки в конец (если не было даты)
+            if (isset($rowPositions[$googleRowKey]) == false && $currentPosition == null)
+                $rowPositions[$googleRowKey] = count($yandexSpreadsheetRows);
         }
         // Чтение Yandex-таблицы
         $reader = IOFactory::createReader("Xlsx");
@@ -298,6 +309,19 @@ class YandexSpreadsheet
         $worksheet = $spreadsheet->setActiveSheetIndexByName(self::FIRST_SHEET_SHEET);
         // Если массив с найденными строками в Google-таблице не пустой
         if (!empty($googleSpreadsheetRows)) {
+            // Определение стиля границ ячеек
+            $border = array(
+                'borders' => array(
+                    'outline' => array(
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => array('argb' => '000000'),
+                    ),
+                    'inside' => array(
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => array('argb' => '000000'),
+                    ),
+                ),
+            );
             // Если массив с позициями вставок строк не пустой
             if (!empty($rowPositions)) {
                 $i = 1;
@@ -329,6 +353,10 @@ class YandexSpreadsheet
                             $excelEndTimeValue = Date::PHPToExcel($googleSpreadsheetRow[4]);
                             $worksheet->setCellValue('E' . $currentPosition, $excelEndTimeValue);
                             $worksheet->setCellValue('F' . $currentPosition, $googleSpreadsheetRow[5]);
+                            $worksheet->setCellValue('L' . $currentPosition, $googleSpreadsheetRow[6]);
+                            // Задание границ ячеек
+                            $worksheet->getStyle('A' . $currentPosition . ':L' . $currentPosition)
+                                ->applyFromArray($border);
                             // Задание цвета ячеек
                             $worksheet->getStyle('A' . $currentPosition . ':L' . $currentPosition)
                                 ->getFill()
@@ -365,19 +393,8 @@ class YandexSpreadsheet
                     $excelEndTimeValue = Date::PHPToExcel($googleSpreadsheetRow[4]);
                     $worksheet->setCellValue('E' . $row, $excelEndTimeValue);
                     $worksheet->setCellValue('F' . $row, $googleSpreadsheetRow[5]);
+                    $worksheet->setCellValue('L' . $row, $googleSpreadsheetRow[6]);
                     // Задание границ ячеек
-                    $border = array(
-                        'borders' => array(
-                            'outline' => array(
-                                'borderStyle' => Border::BORDER_THIN,
-                                'color' => array('argb' => '000000'),
-                            ),
-                            'inside' => array(
-                                'borderStyle' => Border::BORDER_THIN,
-                                'color' => array('argb' => '000000'),
-                            ),
-                        ),
-                    );
                     $worksheet->getStyle('A' . $row . ':L' . $row)->applyFromArray($border);
                     // Задание цвета ячеек
                     $worksheet->getStyle('A' . $row . ':L' . $row)
@@ -387,6 +404,8 @@ class YandexSpreadsheet
                         ->setARGB(self::GREEN_COLOR);
                 }
             }
+            // Скрытие столбца с идентификаторами
+            $worksheet->getColumnDimension('L')->setVisible(false);
         }
         // Обновление файла Yandex-таблицы
         $writer = new Xlsx($spreadsheet);

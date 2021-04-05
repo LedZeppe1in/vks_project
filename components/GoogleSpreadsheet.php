@@ -39,6 +39,7 @@ class GoogleSpreadsheet
     const TOTAL_HOURS_HEADING              = 'Всего часов (без учета обеда)'; // TODO - неверное название заголовка!
     const EMPLOYEE_ID_HEADING              = 'табельный номер';
     const REQUEST_ADJUSTMENTS_HEADING      = 'Корректировки заявок';
+    const GUID_HEADING                     = 'GUID';
 
     // Название папки с копиями таблиц (лог синхронизации с Google-диском)
     const SPREADSHEET_LOG_PATH = '/web/google-synchronization-logs/';
@@ -351,7 +352,7 @@ class GoogleSpreadsheet
                         $googleSpreadsheetRow = array();
                         foreach ($row->getCells() as $cellNumber => $cell)
                             if ($cellNumber == 1 || $cellNumber == 3 || $cellNumber == 5 ||
-                                $cellNumber == 7 || $cellNumber == 8 || $cellNumber == 9)
+                                $cellNumber == 7 || $cellNumber == 8 || $cellNumber == 9 || $cellNumber == 11)
                                 array_push($googleSpreadsheetRow, $cell->getValue());
                         // Если массив дат пуст или если текущая дата в строке входит в диапозон дат выборки
                         if (empty($dates) || in_array($googleSpreadsheetRow[0], $dates)) {
@@ -362,12 +363,14 @@ class GoogleSpreadsheet
                                     isset($yandexSpreadsheetRow[1]) && isset($googleSpreadsheetRow[1]) &&
                                     isset($yandexSpreadsheetRow[2]) && isset($googleSpreadsheetRow[2]) &&
                                     isset($yandexSpreadsheetRow[3]) && isset($googleSpreadsheetRow[3]) &&
-                                    isset($yandexSpreadsheetRow[4]) && isset($googleSpreadsheetRow[4]))
+                                    isset($yandexSpreadsheetRow[4]) && isset($googleSpreadsheetRow[4]) &&
+                                    isset($yandexSpreadsheetRow[5]) && isset($googleSpreadsheetRow[6]))
                                     if ($yandexSpreadsheetRow[0] == $googleSpreadsheetRow[0] &&
                                         $yandexSpreadsheetRow[1] == $googleSpreadsheetRow[1] &&
                                         $yandexSpreadsheetRow[2] == $googleSpreadsheetRow[2] &&
                                         $yandexSpreadsheetRow[3]->format('H:i:s') == $googleSpreadsheetRow[3]->format('H:i:s') &&
-                                        $yandexSpreadsheetRow[4]->format('H:i:s') == $googleSpreadsheetRow[4]->format('H:i:s'))
+                                        $yandexSpreadsheetRow[4]->format('H:i:s') == $googleSpreadsheetRow[4]->format('H:i:s') &&
+                                        $yandexSpreadsheetRow[5] == $googleSpreadsheetRow[6])
                                         $equality = true;
                             // Если совпадения нет, то добавление текущей строки в массив
                             if ($equality == false)
@@ -379,13 +382,15 @@ class GoogleSpreadsheet
         $reader->close();
         // Формирование массива с номерами строк из Yandex-таблицы, которые необходимо удалить
         foreach ($yandexSpreadsheetRows as $yKey => $yRow)
-            if (isset($yRow[0]) && isset($yRow[1]) && isset($yRow[2]) && isset($yRow[2]) && isset($yRow[4]))
-                if ($yRow[0] != null && $yRow[1] != null && $yRow[2] != null && $yRow[3] != null && $yRow[4] != null) {
+            if (isset($yRow[0]) && isset($yRow[1]) && isset($yRow[2]) &&
+                isset($yRow[2]) && isset($yRow[4]) && isset($yRow[5]))
+                if ($yRow[0] != null && $yRow[1] != null && $yRow[2] != null &&
+                    $yRow[3] != null && $yRow[4] != null && $yRow[5] != null) {
                     $equality = false;
                     foreach ($allGoogleSpreadsheetRows as $gRow)
                         if ($yRow[0] == $gRow[0] && $yRow[1] == $gRow[1] && $yRow[2] == $gRow[2] &&
                             $yRow[3]->format('H:i:s') == $gRow[3]->format('H:i:s') &&
-                            $yRow[4]->format('H:i:s') == $gRow[4]->format('H:i:s'))
+                            $yRow[4]->format('H:i:s') == $gRow[4]->format('H:i:s') && $yRow[5] == $gRow[6])
                             $equality = true;
                     if ($equality == false)
                         array_push($yandexSpreadsheetDeletedRows, $yKey);
