@@ -1,0 +1,1 @@
+https://accounts.google.com/o/oauth2/auth?response_type=code&access_type=offline&client_id=411723677839-jgb5h5i5lsvifnthp54ufh81c199sido.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fwww.vks-project.koopwork.ru&state&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fspreadsheets&prompt=select_account%20consent

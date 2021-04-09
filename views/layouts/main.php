@@ -23,22 +23,53 @@ AppAsset::register($this);
     <title><?= Html::encode($this->title) ?></title>
     <?php $this->head() ?>
 </head>
+
 <body>
 <?php $this->beginBody() ?>
+
+<!-- Подключение js-скриптов для индикатора прогресса -->
+<?php $this->registerJsFile('/js/spin.min.js', ['position' => yii\web\View::POS_HEAD]) ?>
+<?php $this->registerJsFile('/js/spinner-options.js', ['position' => yii\web\View::POS_HEAD]) ?>
 
 <div class="wrap">
     <?php
     NavBar::begin([
         'brandLabel' => Yii::$app->name,
-        'brandUrl' => Yii::$app->user->isGuest ? '/site/login' : Yii::$app->homeUrl,
+        'brandUrl' => Yii::$app->homeUrl,
         'options' => [
             'class' => 'navbar-inverse navbar-fixed-top',
         ],
     ]);
     echo Nav::widget([
-        'options' => ['class' => 'navbar-nav navbar-right'],
+        'options' => ['class' => 'navbar-nav navbar-left'],
+        'encodeLabels' => false,
         'items' => [
-            Yii::$app->user->isGuest ? '' : (
+            Yii::$app->user->isGuest ? '' : [
+                'label' => '<span class="glyphicon glyphicon-refresh"></span> Синхронизация данных',
+                'url' => ['/site/data-synchronization']
+            ],
+            Yii::$app->user->isGuest ? '' : [
+                'label' => '<span class="glyphicon glyphicon-ok-circle"></span> Проверка статусов сообщений',
+                'url' => ['/site/check-message-status']
+            ],
+            [
+                'label' => '<span class="glyphicon glyphicon-file"></span> Запрос счета',
+                'url' => ['/site/balance-replenishment']
+            ],
+            [
+                'label' => '<span class="glyphicon glyphicon-bullhorn"></span> Политика конфиденциальности',
+                'url' => ['/site/privacy-policy']
+            ],
+        ],
+    ]);
+    echo Nav::widget([
+        'options' => ['class' => 'navbar-nav navbar-right'],
+        'encodeLabels' => false,
+        'items' => [
+            Yii::$app->user->isGuest ? [
+                'label' => '<span class="glyphicon glyphicon-log-in"></span> Вход',
+                'url' => ['/site/login']
+            ] : (
                 '<li>'
                 . Html::beginForm(['/site/logout'], 'post')
                 . Html::submitButton(
@@ -64,12 +95,17 @@ AppAsset::register($this);
 
 <footer class="footer">
     <div class="container">
-        <p class="pull-left"> &copy; <?= date('Y') ?> ООО "ВКС"</p>
-        <p class="pull-right">Разработано в ИДСТУ СО РАН</p>
+        <p class="pull-left"> &copy; <?= date('Y') ?>
+            <?= Html::a('ООО "ВКС"', 'http://koopwork.ru/o-kompanii/') ?></p>
+        <p class="pull-right">Разработано <?= Html::a('ООО "ЦентраСиб"', 'http://centrasib.ru') ?></p>
     </div>
 </footer>
 
 <?php $this->endBody() ?>
+
+<div id ="overlay"></div><!-- div for js spinner -->
+<div id ="center"></div><!-- div for js spinner -->
+
 </body>
 </html>
 <?php $this->endPage() ?>

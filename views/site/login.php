@@ -37,5 +37,9 @@ $this->title = 'Авторизация';
             </div>
         </div>
 
+        <div class="col-lg-offset-1 col-lg-11" style="color:#999;margin:1em 0">
+            <?= Html::a('Политика конфиденциальности', ['/site/privacy-policy']) ?>
+        </div>
+
     <?php ActiveForm::end(); ?>
 </div>

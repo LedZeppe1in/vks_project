@@ -28,6 +28,18 @@ $config = [
             //'class' => 'app\components\LangUrlManager',
             'rules' => [
                 '/' => 'site/index',
+                'login' => 'site/login',
+                'privacy-policy' => 'site/privacy-policy',
+                'contact' => 'site/contact',
+                'checking' => 'site/checking',
+                'save-paths' => 'site/save-paths',
+                'get-mailing-list' => 'site/get-mailing-list',
+                'get-mailing-volume' => 'site/get-mailing-volume',
+                'save-message-template' => 'site/save-message-template',
+                'notify-employees' => 'site/notify-employees',
+                'check-message-status' => 'site/check-message-status',
+                'data-synchronization' => 'site/data-synchronization',
+                'balance-replenishment' => 'site/balance-replenishment',
             ],
         ],
         'cache' => [
