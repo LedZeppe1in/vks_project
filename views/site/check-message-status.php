@@ -35,20 +35,20 @@ use kartik\datetime\DateTimePicker;
             let toDatetimeField = document.getElementById("notificationresultform-todatetime");
             let fromDatetime = new Date().toLocaleDateString();
             if (this.value !== "")
-                toDatetimeField.value = fromDatetime + "  00:00";
+                toDatetimeField.value = fromDatetime + " 23:59";
             if (this.value === "0")
-                fromDatetimeField.value = fromDatetime + "  00:00";
+                fromDatetimeField.value = fromDatetime + " 00:00";
             if (this.value === "1") {
                 let toDatetime = new Date(new Date().setDate(new Date().getDate() - 1)).toLocaleDateString();
-                fromDatetimeField.value = toDatetime + "  00:00";
+                fromDatetimeField.value = toDatetime + " 00:00";
             }
             if (this.value === "2") {
                 let toDatetime = new Date(new Date().setDate(new Date().getDate() - 3)).toLocaleDateString();
-                fromDatetimeField.value = toDatetime + "  00:00";
+                fromDatetimeField.value = toDatetime + " 00:00";
             }
             if (this.value === "3") {
                 let toDatetime = new Date(new Date().setDate(new Date().getDate() - 7)).toLocaleDateString();
-                fromDatetimeField.value = toDatetime + "  00:00";
+                fromDatetimeField.value = toDatetime + " 00:00";
             }
         });
     });

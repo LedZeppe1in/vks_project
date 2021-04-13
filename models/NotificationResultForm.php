@@ -57,13 +57,13 @@ class NotificationResultForm extends Model
     public static function getAllStatuses()
     {
         return [
-            self::ERROR_STATUS => 'Ошибка',
-            self::DELIVERED_STATUS => 'Доставлено',
-            self::SENT_STATUS => 'Отправлено',
-            self::QUEUE_STATUS => 'В очереди',
-            self::UNKNOWN_STATUS => 'Неизвестен',
-            self::REJECTED_STATUS => 'Отклонено',
-            self::EXPIRED_STATUS => 'Просрочено',
+            self::ERROR_STATUS => '<p style="color: darkred">Ошибка</p>',
+            self::DELIVERED_STATUS => '<p style="color: green">Доставлено</p>',
+            self::SENT_STATUS => '<p style="color: blue">Отправлено</p>',
+            self::QUEUE_STATUS => '<p style="color: darkgoldenrod">В очереди</p>',
+            self::UNKNOWN_STATUS => '<p style="color: #b37400">Неизвестен</p>',
+            self::REJECTED_STATUS => '<p style="color: red">Отклонено</p>',
+            self::EXPIRED_STATUS => '<p style="color: darkmagenta">Просрочено</p>',
         ];
     }
 

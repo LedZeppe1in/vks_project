@@ -819,6 +819,11 @@ class SiteController extends Controller
             $response = curl_exec($handle);
             curl_close($handle);
             // Формирование массива для GridView из ответа
+            $deliveredMessageNumber = 0;
+            $sentMessageNumber = 0;
+            $queueMessageNumber = 0;
+            $rejectedMessageNumber = 0;
+            $expiredMessageNumber = 0;
             $allValues = array();
             $responseArray = explode('^', $response);
             foreach ($responseArray as $item) {
@@ -834,6 +839,16 @@ class SiteController extends Controller
                                 array_push($currentValues, $dateTime->format('d.m.Y H:i'));
                             } else
                                 array_push($currentValues, $strReplace);
+                            if ($key == 3 && $strReplace == 1)
+                                $deliveredMessageNumber++;
+                            if ($key == 3 && $strReplace == 2)
+                                $sentMessageNumber++;
+                            if ($key == 3 && $strReplace == 3)
+                                $queueMessageNumber++;
+                            if ($key == 3 && $strReplace == 5)
+                                $rejectedMessageNumber++;
+                            if ($key == 3 && $strReplace == 6)
+                                $expiredMessageNumber++;
                         }
                     }
                     array_push($allValues, $currentValues);
@@ -850,7 +865,12 @@ class SiteController extends Controller
             Yii::$app->getSession()->setFlash('success', 'Вы успешно проверили статусы сообщений!');
 
             return $this->render('notification-result', [
-                'dataProvider' => $dataProvider
+                'dataProvider' => $dataProvider,
+                'deliveredMessageNumber' => $deliveredMessageNumber,
+                'sentMessageNumber' => $sentMessageNumber,
+                'queueMessageNumber' => $queueMessageNumber,
+                'rejectedMessageNumber' => $rejectedMessageNumber,
+                'expiredMessageNumber' => $expiredMessageNumber,
             ]);
         }
 
