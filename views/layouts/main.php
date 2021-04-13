@@ -52,7 +52,7 @@ AppAsset::register($this);
                 'label' => '<span class="glyphicon glyphicon-ok-circle"></span> Проверка статусов сообщений',
                 'url' => ['/site/check-message-status']
             ],
-            [
+            Yii::$app->user->isGuest ? '' : [
                 'label' => '<span class="glyphicon glyphicon-file"></span> Запрос счета',
                 'url' => ['/site/balance-replenishment']
             ],
