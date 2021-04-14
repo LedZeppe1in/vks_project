@@ -3,10 +3,8 @@
 /* @var $this yii\web\View */
 /* @var $dataProvider app\controllers\SiteController */
 /* @var $deliveredMessageNumber app\controllers\SiteController */
-/* @var $sentMessageNumber app\controllers\SiteController */
-/* @var $queueMessageNumber app\controllers\SiteController */
-/* @var $rejectedMessageNumber app\controllers\SiteController */
-/* @var $expiredMessageNumber app\controllers\SiteController */
+/* @var $sentAndQueueMessageNumber app\controllers\SiteController */
+/* @var $allRejectedMessageNumber app\controllers\SiteController */
 
 $this->title = 'Результаты информирования';
 
@@ -24,10 +22,8 @@ use app\models\NotificationResultForm;
     <div class="well">
         <div class="row">
             <div class="col-sm-2" style="color: green">Доставлено: <?= $deliveredMessageNumber ?></div>
-            <div class="col-sm-2" style="color: blue">Отправлено: <?= $sentMessageNumber ?></div>
-            <div class="col-sm-2" style="color: darkgoldenrod">В очереди: <?= $queueMessageNumber ?></div>
-            <div class="col-sm-2" style="color: red">Отклонено: <?= $rejectedMessageNumber ?></div>
-            <div class="col-sm-2" style="color: darkmagenta">Просрочено: <?= $expiredMessageNumber ?></div>
+            <div class="col-sm-3" style="color: blue">Отправлено / В очереди: <?= $sentAndQueueMessageNumber ?></div>
+            <div class="col-sm-2" style="color: red">Не доставлено: <?= $allRejectedMessageNumber ?></div>
         </div>
     </div>
 

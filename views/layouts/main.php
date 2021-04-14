@@ -49,12 +49,22 @@ AppAsset::register($this);
                 'url' => ['/site/data-synchronization']
             ],
             Yii::$app->user->isGuest ? '' : [
-                'label' => '<span class="glyphicon glyphicon-ok-circle"></span> Проверка статусов сообщений',
-                'url' => ['/site/check-message-status']
-            ],
-            Yii::$app->user->isGuest ? '' : [
-                'label' => '<span class="glyphicon glyphicon-file"></span> Запрос счета',
-                'url' => ['/site/balance-replenishment']
+                'label' => '<span class="glyphicon glyphicon-envelope"></span> СМС-Органайзер',
+                'url' => '#',
+                'items' => [
+                    [
+                        'label' => 'Общее информирование',
+                        'url' => ['/site/general-information']
+                    ],
+                    [
+                        'label' => 'Проверка статусов сообщений',
+                        'url' => ['/site/check-message-status']
+                    ],
+                    [
+                        'label' => 'Запрос счета',
+                        'url' => ['/site/balance-replenishment']
+                    ]
+                ]
             ],
             [
                 'label' => '<span class="glyphicon glyphicon-bullhorn"></span> Политика конфиденциальности',

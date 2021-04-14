@@ -818,12 +818,11 @@ class SiteController extends Controller
             curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
             $response = curl_exec($handle);
             curl_close($handle);
-            // Формирование массива для GridView из ответа
+            // Переменные для статистики сообщений
             $deliveredMessageNumber = 0;
-            $sentMessageNumber = 0;
-            $queueMessageNumber = 0;
-            $rejectedMessageNumber = 0;
-            $expiredMessageNumber = 0;
+            $sentAndQueueMessageNumber = 0;
+            $allRejectedMessageNumber = 0;
+            // Формирование массива для GridView из ответа
             $allValues = array();
             $responseArray = explode('^', $response);
             foreach ($responseArray as $item) {
@@ -839,16 +838,14 @@ class SiteController extends Controller
                                 array_push($currentValues, $dateTime->format('d.m.Y H:i'));
                             } else
                                 array_push($currentValues, $strReplace);
+                            // Определение статистики сообщений
                             if ($key == 3 && $strReplace == 1)
                                 $deliveredMessageNumber++;
-                            if ($key == 3 && $strReplace == 2)
-                                $sentMessageNumber++;
-                            if ($key == 3 && $strReplace == 3)
-                                $queueMessageNumber++;
-                            if ($key == 3 && $strReplace == 5)
-                                $rejectedMessageNumber++;
-                            if ($key == 3 && $strReplace == 6)
-                                $expiredMessageNumber++;
+                            if (($key == 3 && $strReplace == 2) || ($key == 3 && $strReplace == 3))
+                                $sentAndQueueMessageNumber++;
+                            if (($key == 3 && $strReplace == 0) || ($key == 3 && $strReplace == 4) ||
+                                ($key == 3 && $strReplace == 5) || ($key == 3 && $strReplace == 6))
+                                $allRejectedMessageNumber++;
                         }
                     }
                     array_push($allValues, $currentValues);
@@ -867,10 +864,8 @@ class SiteController extends Controller
             return $this->render('notification-result', [
                 'dataProvider' => $dataProvider,
                 'deliveredMessageNumber' => $deliveredMessageNumber,
-                'sentMessageNumber' => $sentMessageNumber,
-                'queueMessageNumber' => $queueMessageNumber,
-                'rejectedMessageNumber' => $rejectedMessageNumber,
-                'expiredMessageNumber' => $expiredMessageNumber,
+                'sentAndQueueMessageNumber' => $sentAndQueueMessageNumber,
+                'allRejectedMessageNumber' => $allRejectedMessageNumber,
             ]);
         }
 
