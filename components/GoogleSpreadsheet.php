@@ -414,12 +414,13 @@ class GoogleSpreadsheet
      *
      * @param $path - путь к файлу электронной таблицы на сервере
      * @param $dates - массив дат для выборки строк
+     * @param $allEmployees - параметр (флаг) обозначающий необходимость получения всех сотрудников
      * @return array - массив с информацией о сотрудниках для оповещения
      * @throws \Box\Spout\Common\Exception\IOException
      * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
      * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
      */
-    public function getEmployeesList($path, $dates)
+    public function getEmployeesList($path, $dates, $allEmployees)
     {
         // Массив c информацией о сотрудниках для оповещения
         $employees = array();
@@ -466,22 +467,32 @@ class GoogleSpreadsheet
                             if ($cellNumber == 3 || $cellNumber == 5)
                                 array_push($employee, $cell->getValue());
                         }
-                        // Цикл по всем найденным строкам подтвержденных заявок
-                        foreach ($googleSpreadsheetRows as $googleSpreadsheetRow)
-                            // Если табельные номера совпадают
-                            if ($googleSpreadsheetRow[5] == $employee[1]) {
-                                // Формирование массива с информацией о сотруднике на работе
-                                $employeeInformation = array();
-                                $employeeInformation = $employee;
-                                // Добавление недостающей информации в массив информации о сотруднике на работе
-                                array_push($employeeInformation, $googleSpreadsheetRow[0]);
-                                array_push($employeeInformation, $googleSpreadsheetRow[3]);
-                                array_push($employeeInformation, $googleSpreadsheetRow[4]);
-                                array_push($employeeInformation, $googleSpreadsheetRow[1]);
-                                array_push($employeeInformation, $googleSpreadsheetRow[2]);
-                                // Добавление текущей строки с информацией о сотруднике в массив
-                                array_push($employees, $employeeInformation);
-                            }
+                        // Если не надо находить всех сотрудников
+                        if ($allEmployees == false) {
+                            // Цикл по всем найденным строкам подтвержденных заявок
+                            foreach ($googleSpreadsheetRows as $googleSpreadsheetRow)
+                                // Если табельные номера совпадают
+                                if ($googleSpreadsheetRow[5] == $employee[1]) {
+                                    // Формирование массива с информацией о сотруднике на работе
+                                    $employeeInformation = array();
+                                    $employeeInformation = $employee;
+                                    // Добавление недостающей информации в массив информации о сотруднике на работе
+                                    array_push($employeeInformation, $googleSpreadsheetRow[0]);
+                                    array_push($employeeInformation, $googleSpreadsheetRow[3]);
+                                    array_push($employeeInformation, $googleSpreadsheetRow[4]);
+                                    array_push($employeeInformation, $googleSpreadsheetRow[1]);
+                                    array_push($employeeInformation, $googleSpreadsheetRow[2]);
+                                    // Добавление текущей строки с информацией о сотруднике в массив
+                                    array_push($employees, $employeeInformation);
+                                }
+                        }
+                        // Если надо находить всех сотрудников
+                        if ($allEmployees == true) {
+                            foreach ($row->getCells() as $cellNumber => $cell)
+                                if ($cellNumber == 4 || $cellNumber == 6 || $cellNumber == 7)
+                                    array_push($employee, $cell->getValue());
+                            array_push($employees, $employee);
+                        }
                     }
         $reader->close();
 

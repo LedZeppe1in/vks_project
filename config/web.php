@@ -40,6 +40,8 @@ $config = [
                 'check-message-status' => 'site/check-message-status',
                 'data-synchronization' => 'site/data-synchronization',
                 'balance-replenishment' => 'site/balance-replenishment',
+                'general-information' => 'site/general-information',
+                'save-general-message-template' => 'site/save-general-message-template',
             ],
         ],
         'cache' => [

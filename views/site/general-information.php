@@ -4,11 +4,16 @@
 /* @var $cloudDriveModel app\models\CloudDriveForm */
 /* @var $notificationModel app\models\NotificationForm */
 /* @var $employees app\models\NotificationForm */
+/* @var $currentBalance app\controllers\SiteController */
 
-$this->title = 'Синхронизация данных';
+$this->title = 'Общее информирование';
 
+use kartik\date\DatePicker;
 use yii\helpers\Html;
-use yii\bootstrap\Tabs;
+use yii\widgets\Pjax;
+use yii\grid\GridView;
+use yii\bootstrap\Button;
+use yii\bootstrap\ActiveForm;
 ?>
 
 <!-- Подключение скрипта для проверки формы -->
@@ -40,11 +45,13 @@ use yii\bootstrap\Tabs;
             if (document.querySelectorAll("input[type='checkbox']")[i + 1].checked)
                 checked_employees.push(item);
         });
+        // Текст сообщения сотрудникам
+        let message = document.getElementById("notificationform-messagetemplate").value;
         // Ajax-запрос
         $.ajax({
             url: "<?= Yii::$app->request->baseUrl . '/get-mailing-volume' ?>",
             type: "post",
-            data: "employees=" + JSON.stringify(checked_employees),
+            data: "employees=" + JSON.stringify(checked_employees) + "&message=" + JSON.stringify(message),
             dataType: "json",
             success: function(data) {
                 // Слой с отображением объема рассылки для выбранных сотрудников
@@ -81,26 +88,10 @@ use yii\bootstrap\Tabs;
             }
         });
 
-        // Сообщение об успешной проверке таблиц
-        let checkingSuccessMessage = document.getElementById("checking-success-message");
-        // Сообщение об ошибке проверки таблиц
-        let checkingErrorMessage = document.getElementById("checking-error-message");
-        // Сообщение об успешнос сохранении путей к файлам электронных таблиц
-        let savePathsSuccessMessage = document.getElementById("save-paths-success-message");
-        // Сообщение об ошибке копировании электронной таблицы Google
-        let copyErrorMessage = document.getElementById("copy-error-message");
         // Сообщение о не сформированном списке рассылки
         let employeesWarningMessage = document.getElementById("employees-warning-message");
         // Сообщение об успешном формировании списка рассылки
         let employeesSuccessMessage = document.getElementById("employees-success-message");
-        // Слои с подробной информацией Google-таблицы
-        let googleMetaInformationTitle = document.getElementById("google-meta-information-title");
-        let googleMetaInformation = document.getElementById("google-meta-information");
-        // Слои с подробной информацией Yandex-таблицы
-        let yandexMetaInformationTitle = document.getElementById("yandex-meta-information-title");
-        let yandexMetaInformation = document.getElementById("yandex-meta-information");
-        // Ссылка на вкладке "Информирование"
-        let informationTabLink = document.getElementById("information-tab-link");
         // Сообщение об успешном сохранении файла с текстом шаблона сообщения
         let saveFileSuccessMessage = document.getElementById("save-file-success-message");
         // Сообщение об успешном оповещении сотрудников
@@ -112,183 +103,19 @@ use yii\bootstrap\Tabs;
         // Слой с отображением общего объема рассылки для всех сотрудников
         let fullMailingVolumeTitle = document.getElementById("full-mailing-volume");
 
-        // Обработка нажатия кнопки проверки
-        $("#checking-button").click(function(e) {
-            // Отмена поведения кнопки по умолчанию (submit)
-            e.preventDefault();
-            // Форма с полями
-            let form = $("#cloud-drive-form");
-            // Скрытие слоев с подробной информацией о файлах электронных таблиц
-            googleMetaInformationTitle.style.display = "none";
-            googleMetaInformation.style.display = "none";
-            yandexMetaInformationTitle.style.display = "none";
-            yandexMetaInformation.style.display = "none";
-            // Ajax-запрос
-            $.ajax({
-                url: "<?= Yii::$app->request->baseUrl . '/checking' ?>",
-                type: "post",
-                data: form.serialize(),
-                dataType: "json",
-                success: function(data) {
-                    // Если валидация прошла успешно (нет ошибок ввода)
-                    if (data["success"]) {
-                        // Скрытие списка ошибок ввода
-                        $("#cloud-drive-form .error-summary").hide();
-                        // Если ошибки при проверке таблиц нет
-                        if (!data["checkingError"]) {
-                            // Активация слоя с сообщением об успешной проверке таблиц
-                            checkingSuccessMessage.style.display = "block";
-                            // Деативация всех остальных слоев с сообщениями
-                            checkingErrorMessage.style.display = "none";
-                            savePathsSuccessMessage.style.display = "none";
-                            copyErrorMessage.style.display = "none";
-                            employeesWarningMessage.style.display = "none";
-                            employeesSuccessMessage.style.display = "none";
-                            // Формирование текста подробной информации о файле с Google-диска
-                            googleMetaInformation.innerHTML = "<b>ID файла:</b> " +
-                                data["googleResource"]["id"] + "<br/>";
-                            googleMetaInformation.innerHTML += "<b>Имя файла:</b> " +
-                                data["googleResource"]["name"] + "<br/>";
-                            googleMetaInformation.innerHTML += "<b>Тип:</b> " +
-                                data["googleResource"]["kind"] + "<br/>";
-                            googleMetaInformation.innerHTML += "<b>MIME-тип:</b> " +
-                                data["googleResource"]["mimeType"] + "<br/>";
-                            // Активация слоев с подробной информацией о файле с Yandex-диска
-                            googleMetaInformationTitle.style.display = "block";
-                            googleMetaInformation.style.display = "block";
-                            // Формирование текста подробной информации о файле с Yandex-диска
-                            yandexMetaInformation.innerHTML = "<b>Ключ опубликованного файла:</b> " +
-                                data["yandexResource"]["public_key"] + "<br/>";
-                            yandexMetaInformation.innerHTML += "<b>Ссылка на опубликованный файл:</b> " +
-                                data["yandexResource"]["public_url"] + "<br/>";
-                            yandexMetaInformation.innerHTML += "<b>Имя файла:</b> " +
-                                data["yandexResource"]["name"] + "<br/>";
-                            yandexMetaInformation.innerHTML += "<b>Размер файла:</b> " +
-                                data["yandexResource"]["size"] + "<br/>";
-                            yandexMetaInformation.innerHTML += "<b>Полный путь к файлу на диске:</b> " +
-                                data["yandexResource"]["path"] + "<br/>";
-                            yandexMetaInformation.innerHTML += "<b>Дата и время создания файла:</b> " +
-                                data["yandexResource"]["created"] + "<br/>";
-                            yandexMetaInformation.innerHTML += "<b>Дата и время изменения файла:</b> " +
-                                data["yandexResource"]["modified"];
-                            // Активация слоев с подробной информацией о файле с Yandex-диска
-                            yandexMetaInformationTitle.style.display = "block";
-                            yandexMetaInformation.style.display = "block";
-                            // Скрытие индикатора прогресса
-                            $("#overlay").hide();
-                            spinner.stop(target);
-                            //
-                            console.log(data["googleResource"]);
-                        } else {
-                            // Активация слоя с сообщением об ошибке проверки таблиц
-                            checkingErrorMessage.style.display = "block";
-                            // Деативация всех остальных слоев с сообщениями
-                            checkingSuccessMessage.style.display = "none";
-                            savePathsSuccessMessage.style.display = "none";
-                            copyErrorMessage.style.display = "none";
-                            employeesWarningMessage.style.display = "none";
-                            employeesSuccessMessage.style.display = "none";
-                            // Скрытие индикатора прогресса
-                            $("#overlay").hide();
-                            spinner.stop(target);
-                        }
-                    } else {
-                        // Деактивация всех слоев с сообщениями
-                        savePathsSuccessMessage.style.display = "none";
-                        copyErrorMessage.style.display = "none";
-                        employeesWarningMessage.style.display = "none";
-                        employeesSuccessMessage.style.display = "none";
-                        checkingErrorMessage.style.display = "none";
-                        checkingSuccessMessage.style.display = "none";
-                        // Отображение ошибок ввода
-                        viewErrors("#cloud-drive-form", data);
-                        // Скрытие индикатора прогресса
-                        $("#overlay").hide();
-                        spinner.stop(target);
-                    }
-                },
-                error: function() {
-                    // Скрытие индикатора прогресса
-                    $("#overlay").hide();
-                    spinner.stop(target);
-                    alert("Непредвиденная ошибка!");
-                }
-            });
-        });
-
-        // Обработка нажатия кнопки сохранения путей
-        $("#save-paths-button").click(function(e) {
-            // Отмена поведения кнопки по умолчанию (submit)
-            e.preventDefault();
-            // Форма с полями
-            let form = $("#cloud-drive-form");
-            // Скрытие слоев с подробной информацией о файлах электронных таблиц
-            googleMetaInformationTitle.style.display = "none";
-            googleMetaInformation.style.display = "none";
-            yandexMetaInformationTitle.style.display = "none";
-            yandexMetaInformation.style.display = "none";
-            // Ajax-запрос
-            $.ajax({
-                url: "<?= Yii::$app->request->baseUrl . '/save-paths' ?>",
-                type: "post",
-                data: form.serialize(),
-                dataType: "json",
-                success: function(data) {
-                    // Если валидация прошла успешно (нет ошибок ввода)
-                    if (data["success"]) {
-                        // Скрытие списка ошибок ввода
-                        $("#cloud-drive-form .error-summary").hide();
-                        // Активация слоя с сообщением об успешном сохранении файла с путями к электронным таблицам
-                        savePathsSuccessMessage.style.display = "block";
-                        // Деактивация всех слоев с сообщениями
-                        copyErrorMessage.style.display = "none";
-                        employeesWarningMessage.style.display = "none";
-                        employeesSuccessMessage.style.display = "none";
-                        checkingErrorMessage.style.display = "none";
-                        checkingSuccessMessage.style.display = "none";
-                        // Скрытие индикатора прогресса
-                        $("#overlay").hide();
-                        spinner.stop(target);
-                    } else {
-                        // Деактивация всех слоев с сообщениями
-                        savePathsSuccessMessage.style.display = "none";
-                        copyErrorMessage.style.display = "none";
-                        employeesWarningMessage.style.display = "none";
-                        employeesSuccessMessage.style.display = "none";
-                        checkingErrorMessage.style.display = "none";
-                        checkingSuccessMessage.style.display = "none";
-                        // Отображение ошибок ввода
-                        viewErrors("#cloud-drive-form", data);
-                        // Скрытие индикатора прогресса
-                        $("#overlay").hide();
-                        spinner.stop(target);
-                    }
-                },
-                error: function() {
-                    // Скрытие индикатора прогресса
-                    $("#overlay").hide();
-                    spinner.stop(target);
-                    alert("Непредвиденная ошибка!");
-                }
-            });
-        });
-
         // Обработка нажатия кнопки формирования списка рассылки
         $("#mailing-button").click(function(e) {
             // Отмена поведения кнопки по умолчанию (submit)
             e.preventDefault();
             // Форма с полями
             let form = $("#cloud-drive-form");
-            // Скрытие слоев с подробной информацией о файлах электронных таблиц
-            googleMetaInformationTitle.style.display = "none";
-            googleMetaInformation.style.display = "none";
-            yandexMetaInformationTitle.style.display = "none";
-            yandexMetaInformation.style.display = "none";
+            // Текст сообщения сотрудникам
+            let message = document.getElementById("notificationform-messagetemplate").value;
             // Ajax-запрос
             $.ajax({
                 url: "<?= Yii::$app->request->baseUrl . '/get-mailing-list' ?>",
                 type: "post",
-                data: form.serialize() + "&all_employees=false",
+                data: form.serialize() + "&all_employees=true&message=" + JSON.stringify(message),
                 dataType: "json",
                 success: function(data) {
                     // Если валидация прошла успешно (нет ошибок ввода)
@@ -310,11 +137,6 @@ use yii\bootstrap\Tabs;
                                 document.getElementById("pjax-button").click();
                                 // Формирование списка сотрудников для оповещения
                                 employees = data["employees"];
-                                // Если нет ошибок, то вывод текущего баланса
-                                if (data["balance"] != '-1' && data["balance"] != '-2')
-                                    currentBalanceTitle.innerHTML = data["balance"] + " СМС";
-                                else
-                                    currentBalanceTitle.innerHTML = "не удалось проверить баланс";
                                 // Формирование информации об общем объеме рассылки для всех сотрудников
                                 fullMailingVolume = data["mailingVolume"]
                                 fullMailingVolumeTitle.innerHTML = fullMailingVolume;
@@ -322,42 +144,23 @@ use yii\bootstrap\Tabs;
                                 // Активация слоя с сообщением о не успешном формировании списка сотрудников для оповещения
                                 employeesWarningMessage.style.display = "block";
                                 // Деативация всех остальных слоев с сообщениями
-                                savePathsSuccessMessage.style.display = "none";
-                                copyErrorMessage.style.display = "none";
                                 employeesSuccessMessage.style.display = "none";
-                                checkingErrorMessage.style.display = "none";
-                                checkingSuccessMessage.style.display = "none";
-                                // Деактивация вкладки информирования
-                                $("#information-tab").addClass("disabled");
-                                informationTabLink.dataset.toggle = "";
                                 // Скрытие индикатора прогресса
                                 $("#overlay").hide();
                                 spinner.stop(target);
                             }
                         } else {
-                            // Активация слоя с сообщением об ошибке копировании Google-таблицы
-                            copyErrorMessage.style.display = "block";
                             // Деативация всех остальных слоев с сообщениями
-                            savePathsSuccessMessage.style.display = "none";
                             employeesWarningMessage.style.display = "none";
                             employeesSuccessMessage.style.display = "none";
-                            checkingErrorMessage.style.display = "none";
-                            checkingSuccessMessage.style.display = "none";
-                            // Деактивация вкладки информирования
-                            $("#information-tab").addClass("disabled");
-                            informationTabLink.dataset.toggle = "";
                             // Скрытие индикатора прогресса
                             $("#overlay").hide();
                             spinner.stop(target);
                         }
                     } else {
                         // Деактивация всех слоев с сообщениями
-                        savePathsSuccessMessage.style.display = "none";
-                        copyErrorMessage.style.display = "none";
                         employeesWarningMessage.style.display = "none";
                         employeesSuccessMessage.style.display = "none";
-                        checkingErrorMessage.style.display = "none";
-                        checkingSuccessMessage.style.display = "none";
                         // Отображение ошибок ввода
                         viewErrors("#cloud-drive-form", data);
                         // Скрытие индикатора прогресса
@@ -379,14 +182,9 @@ use yii\bootstrap\Tabs;
             // Активация слоя с сообщением об успешном формировании списка сотрудников для оповещения
             employeesSuccessMessage.style.display = "block";
             // Деативация всех остальных слоев с сообщениями
-            savePathsSuccessMessage.style.display = "none";
-            copyErrorMessage.style.display = "none";
             employeesWarningMessage.style.display = "none";
-            checkingErrorMessage.style.display = "none";
-            checkingSuccessMessage.style.display = "none";
-            // Активация вкладки информирования
-            $("#information-tab").removeClass("disabled");
-            informationTabLink.dataset.toggle = "tab";
+            // Активация кнопки оповещения
+            document.getElementById("notification-button").disabled = false;
             // Скрытие индикатора прогресса
             $("#overlay").hide();
             spinner.stop(target);
@@ -400,7 +198,7 @@ use yii\bootstrap\Tabs;
             let form = $("#notification-form");
             // Ajax-запрос
             $.ajax({
-                url: "<?= Yii::$app->request->baseUrl . '/save-message-template' ?>",
+                url: "<?= Yii::$app->request->baseUrl . '/save-general-message-template' ?>",
                 type: "post",
                 data: form.serialize(),
                 dataType: "json",
@@ -450,20 +248,19 @@ use yii\bootstrap\Tabs;
                 if (document.querySelectorAll("input[type='checkbox']")[i + 1].checked)
                     checked_employees.push(item);
             });
-            console.log(checked_employees);
+            // Текст сообщения сотрудникам
+            let message = document.getElementById("notificationform-messagetemplate").value;
             // Ajax-запрос
             $.ajax({
                 url: "<?= Yii::$app->request->baseUrl . '/notify-employees' ?>",
                 type: "post",
-                data: form.serialize() + "&employees=" + JSON.stringify(checked_employees),
+                data: form.serialize() + "&employees=" + JSON.stringify(checked_employees) + JSON.stringify(message),
                 dataType: "json",
                 success: function(data) {
                     // Если валидация прошла успешно (нет ошибок ввода)
                     if (data["success"]) {
                         // Скрытие списка ошибок ввода
                         $("#notification-form .error-summary").hide();
-                        //
-                        console.log(data["smsoResponse"]);
                         // Если нет сотрудников для оповещения
                         if (data["smsoResponse"].length !== 0) {
                             // Активация слоя с сообщением об успешной отправке сообщений сотрудникам
@@ -477,7 +274,7 @@ use yii\bootstrap\Tabs;
                         // Деактивация всех слоев с сообщениями
                         saveFileSuccessMessage.style.display = "none";
                         // Если нет ошибок, то вывод текущего баланса
-                        if (data["balance"] != '-1' && data["balance"] != '-2')
+                        if (data["balance"] !== '-1' && data["balance"] !== '-2')
                             currentBalanceTitle.innerHTML = data["balance"] + " СМС";
                         else
                             currentBalanceTitle.innerHTML = "не удалось проверить баланс";
@@ -517,31 +314,191 @@ use yii\bootstrap\Tabs;
     <h1><?= Html::encode($this->title) ?></h1>
 
     <div class="body-content">
-        <?php echo Tabs::widget([
-            'items' => [
-                [
-                    'label' => 'Данные с облачных дисков',
-                    'content' => $this->render('_cloud_drive', [
-                        'cloudDriveModel' => $cloudDriveModel
-                    ]),
-                ],
-                [
-                    'label' => 'Информирование',
-                    'content' => $this->render('_notification', [
-                        'notificationModel' => $notificationModel,
-                        'employees' => $employees,
-                    ]),
-                    'headerOptions' => [
-                        'id' => 'information-tab',
-                        'class' => 'disabled'
-                    ],
-                    'linkOptions' => [
-                        'id' => 'information-tab-link',
-                        'data-toggle' => ''
-                    ]
-                ]
-            ]
-        ]); ?>
-    </div>
 
+        <div id="employees-warning-message" class="alert alert-warning alert-dismissible" role="alert" style="display: none">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <strong>Внимание!</strong> Список сотрудников для оповещения не сформирован.
+        </div>
+
+        <div id="employees-success-message" class="alert alert-success alert-dismissible" role="alert" style="display: none">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <strong>Список рассылки сформирован!</strong> Вы успешно сформировали список сотрудников для оповещения.
+        </div>
+
+        <div id="save-file-success-message" class="alert alert-success alert-dismissible" role="alert" style="display: none">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <strong>Сообщение сохранено!</strong> Вы успешно сохранили текст с шаблоном сообщения.
+        </div>
+
+        <div id="notification-success-message" class="alert alert-success alert-dismissible" role="alert" style="display: none">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <strong>Оповещение прошло успешно!</strong> Вы успешно оповестили всех выбранных сотрудников из списка.
+        </div>
+
+        <div id="notification-warning-message" class="alert alert-warning alert-dismissible" role="alert" style="display: none">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <strong>Внимание!</strong> Сотрудники для оповещения не выбраны.
+        </div>
+
+        <hr />
+
+        <h3>Статистика СМС:</h3>
+
+        <span style="margin-left: 10px;"><b>Текущий баланс: </b></span>
+        <span id="current-balance" class="badge" style="margin-bottom: 2px;"><?= $currentBalance ?> СМС</span>
+            <?= Html::a('Запрос счета на пополнение баланса', ['/site/balance-replenishment']); ?><br /><br />
+        <span style="margin-left: 10px;"><b>Общий объём рассылки для всех сотрудников: </b></span>
+        <span id="full-mailing-volume" class="badge" style="margin-bottom: 2px;">0</span><br /><br />
+        <span style="margin-left: 10px;"><b>Объём рассылки для выбранных сотрудников: </b></span>
+        <span id="custom-mailing-volume" class="badge" style="margin-bottom: 2px;">0</span><br /><br />
+
+        <h3>Оповещение сотрудников:</h3>
+
+        <?php $form = ActiveForm::begin([
+            'id' => 'notification-form',
+            'enableClientValidation' => true,
+        ]); ?>
+
+            <?= $form->errorSummary($notificationModel); ?>
+
+            <?= $form->field($notificationModel, 'messageTemplate')->textarea(['rows' => 8])
+                ->label('Текст сообщения') ?>
+
+            <div class="form-group">
+                <?= Button::widget([
+                    'label' => '<span class="glyphicon glyphicon-bell"></span> Оповестить выбранных сотрудников',
+                    'encodeLabel' => false,
+                    'options' => [
+                        'id' => 'notification-button',
+                        'class' => 'btn btn-success',
+                        'disabled' => 'disabled'
+                    ]
+                ]); ?>
+                <?= Button::widget([
+                    'label' => '<span class="glyphicon glyphicon-save"></span> Сохранить шаблон сообщения',
+                    'encodeLabel' => false,
+                    'options' => [
+                        'id' => 'save-message-template-button',
+                        'class' => 'btn btn-primary'
+                    ]
+                ]); ?>
+            </div>
+
+        <?php ActiveForm::end(); ?><br />
+
+        <?php $form = ActiveForm::begin([
+            'id' => 'cloud-drive-form',
+            'enableClientValidation' => true
+        ]); ?>
+
+            <?= $form->errorSummary($cloudDriveModel); ?>
+
+            <?= $form->field($cloudDriveModel, 'googleFileLink')->hiddenInput()->label(false) ?>
+
+            <?= $form->field($cloudDriveModel, 'yandexFilePath')->hiddenInput()->label(false) ?>
+
+            <div style="width: 300px; margin-bottom: 10px; display: none">
+                <label class="control-label has-star">Даты выборки</label>
+                <?= DatePicker::widget([
+                    'model' => $cloudDriveModel,
+                    'form' => $form,
+                    'type' => DatePicker::TYPE_RANGE,
+                    'language' => 'ru',
+                    'attribute' => 'fromDate',
+                    'attribute2' => 'toDate',
+                    'options' => [
+                        'placeholder' => 'Дата начала',
+                    ],
+                    'options2' => [
+                        'placeholder' => 'Дата окончания'
+                    ],
+                    'separator' => ' до ',
+                    'pluginOptions' => [
+                        'format' => 'dd.mm.yyyy',
+                        'autoclose' => true
+                    ]
+                ]); ?>
+            </div>
+
+            <div class="form-group">
+                <?= Button::widget([
+                    'label' => '<span class="glyphicon glyphicon-list-alt"></span> Сформировать список рассылки',
+                    'encodeLabel' => false,
+                    'options' => [
+                        'id' => 'mailing-button',
+                        'class' => 'btn btn-success'
+                    ]
+                ]); ?>
+            </div>
+
+        <?php ActiveForm::end(); ?>
+
+        <h3>Список сотрудников для оповещения:</h3>
+
+        <?php Pjax::begin(['id' => 'pjaxGrid']); ?>
+
+            <?= GridView::widget([
+                'dataProvider' => $employees,
+                'id' => 'employees-list',
+                'columns' => [
+                    [
+                        'class' => 'yii\grid\CheckboxColumn',
+                        'header' => Html::checkBox('selection_all', false, [
+                            'id' => 'select-all-employees',
+                            'class' => 'select-on-check-all',
+                            'onclick' => 'js:checkAllEmployees(this.value, this.checked)'
+                        ]),
+                        'checkboxOptions' => ['onclick' => 'js:checkEmployee(this.value, this.checked)']
+                    ],
+                    ['class' => 'yii\grid\SerialColumn'],
+                    [
+                        'label' => 'ФИО',
+                        'attribute' => '0',
+                    ],
+                    [
+                        'label' => 'Табельный номер',
+                        'attribute' => '1',
+                    ],
+                    [
+                        'label' => 'Телефон',
+                        'attribute' => '2',
+                    ],
+                    [
+                        'label' => 'Карта',
+                        'attribute' => '3',
+                    ],
+                    [
+                        'label' => 'Сеть',
+                        'attribute' => '4',
+                    ],
+                    [
+                        'label' => 'Виды работ',
+                        'attribute' => '5',
+                    ],
+                    [
+                        'label' => 'Статус',
+                    ],
+                ],
+            ]); ?>
+
+            <?= Html::beginForm(['general-information'], 'post',
+                ['id' => 'pjax-form', 'data-pjax' => '', 'style' => 'display:none']); ?>
+                <?= Html::hiddenInput('google-file-link', '', ['id' => 'pjax-google-file-link-input']) ?>
+                <?= Html::hiddenInput('from-date', '', ['id' => 'pjax-from-date-input']) ?>
+                <?= Html::hiddenInput('to-date', '', ['id' => 'pjax-to-date-input']) ?>
+                <?= Html::submitButton('Вычислить', ['id' => 'pjax-button', 'data-pjax' => '']) ?>
+            <?= Html::endForm() ?>
+
+        <?php Pjax::end(); ?>
+    </div>
 </div>

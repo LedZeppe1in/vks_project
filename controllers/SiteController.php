@@ -430,7 +430,7 @@ class SiteController extends Controller
                 // Формирование массива дат для выборки строк
                 $dates = $cloudDriveModel->getDates();
                 // Получение списка сотрудников для оповещения
-                $googleSpreadsheetRows = $googleSpreadsheet->getEmployeesList($path, $dates);
+                $googleSpreadsheetRows = $googleSpreadsheet->getEmployeesList($path, $dates, false);
                 // Формирование массива для GridView
                 $googleArray = array();
                 foreach ($googleSpreadsheetRows as $googleSpreadsheetRow) {
@@ -547,52 +547,67 @@ class SiteController extends Controller
                     $data['copyError'] = false;
                     // Формирование массива дат для выборки строк
                     $dates = $cloudDriveModel->getDates();
+                    // Параметр (флаг) обозначающий необходимость получения всех сотрудников
+                    $allEmployees = json_decode(Yii::$app->request->post('all_employees'), true);
                     // Получение списка сотрудников для оповещения
-                    $employees = $googleSpreadsheet->getEmployeesList($path, $dates);
+                    $employees = $googleSpreadsheet->getEmployeesList($path, $dates, $allEmployees);
                     // Формирование списка сотрудников для оповещения
                     $data['employees'] = $employees;
                     // Переменная для хранения сообщений для всех сотрудников из списка оповещения
                     $allMessages = '';
-                    // Если существует файл с текстом шаблона сообщения, то определяем значение поля текста с этого файла
-                    if (file_exists(Yii::$app->basePath . '/web/' .
-                        NotificationForm::MESSAGE_TEMPLATE_FILE_NAME)) {
-                        // Получение текста шаблона сообщения
-                        $messageTemplate = file_get_contents(Yii::$app->basePath . '/web/' .
-                            NotificationForm::MESSAGE_TEMPLATE_FILE_NAME);
+                    // Если выбран режим оповещения сотрудников по утвержденным заявкам
+                    if ($allEmployees == false) {
+                        // Если существует файл с текстом шаблона сообщения,
+                        // то определяем значение поля текста с этого файла
+                        if (file_exists(Yii::$app->basePath . '/web/' .
+                            NotificationForm::MESSAGE_TEMPLATE_FILE_NAME)) {
+                            // Получение текста шаблона сообщения
+                            $messageTemplate = file_get_contents(Yii::$app->basePath . '/web/' .
+                                NotificationForm::MESSAGE_TEMPLATE_FILE_NAME);
+                            // Обход всех сотрудников из списка оповещения
+                            foreach ($employees as $employee) {
+                                // Массив поисковых маркеров в тексте
+                                $search = array(
+                                    NotificationForm::DATETIME_MARKER,
+                                    NotificationForm::ADDRESS_MARKER,
+                                    NotificationForm::WORK_TYPE_MARKER
+                                );
+                                // Формирование даты и времени
+                                $dateTime = $employee[3]->format('d.m.Y') . '; ' . $employee[4]->format('H:i') . '-' .
+                                    $employee[5]->format('H:i');
+                                // Массив замены
+                                $replace = array($dateTime, $employee[6], $employee[7]);
+                                // Формирование конкретного сообщения из шаблона путем замены подстрок
+                                $message = str_replace($search, $replace, $messageTemplate);
+                                // Запоминание текущего текста сообщения
+                                $allMessages .= $message;
+                            }
+                        }
+                        // Формирование параметров для POST-запроса к СМС-Органайзеру
+                        $parameters = array('login' => NotificationForm::LOGIN, 'passwd' => NotificationForm::PASSWORD);
+                        // Отправка POST-запроса СМС-Органайзеру для проверки баланса
+                        $handle = curl_init();
+                        curl_setopt($handle, CURLOPT_URL,NotificationForm::CHECK_BALANCE_LINK);
+                        curl_setopt($handle, CURLOPT_POST, 1);
+                        curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
+                        curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+                        $serverOutput = curl_exec($handle);
+                        curl_close ($handle);
+                        // Формирование текущего баланса
+                        $data['balance'] = $serverOutput;
+                    }
+                    // Если выбран режим оповещения всех сотрудников
+                    if ($allEmployees == true) {
+                        // Текст сообщения введенного пользователем
+                        $message = json_decode(Yii::$app->request->post('message'), true);
                         // Обход всех сотрудников из списка оповещения
                         foreach ($employees as $employee) {
-                            // Массив поисковых маркеров в тексте
-                            $search = array(
-                                NotificationForm::DATETIME_MARKER,
-                                NotificationForm::ADDRESS_MARKER,
-                                NotificationForm::WORK_TYPE_MARKER
-                            );
-                            // Формирование даты и времени
-                            $dateTime = $employee[3]->format('d.m.Y') . '; ' . $employee[4]->format('H:i') . '-' .
-                                $employee[5]->format('H:i');
-                            // Массив замены
-                            $replace = array($dateTime, $employee[6], $employee[7]);
-                            // Формирование конкретного сообщения из шаблона путем замены подстрок
-                            $message = str_replace($search, $replace, $messageTemplate);
                             // Запоминание текущего текста сообщения
                             $allMessages .= $message;
                         }
                     }
                     // Формирование объема рассылки
                     $data['mailingVolume'] = round(strlen($allMessages) / 67);
-                    // Формирование параметров для POST-запроса к СМС-Органайзеру
-                    $parameters = array('login' => NotificationForm::LOGIN, 'passwd' => NotificationForm::PASSWORD);
-                    // Отправка POST-запроса СМС-Органайзеру для проверки баланса
-                    $handle = curl_init();
-                    curl_setopt($handle, CURLOPT_URL,NotificationForm::CHECK_BALANCE_LINK);
-                    curl_setopt($handle, CURLOPT_POST, 1);
-                    curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
-                    curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
-                    $serverOutput = curl_exec($handle);
-                    curl_close ($handle);
-                    // Формирование текущего баланса
-                    $data['balance'] = $serverOutput;
-
                 } else
                     // Наличие ошибки при копировании файла электронной таблицы
                     $data['copyError'] = true;
@@ -626,29 +641,40 @@ class SiteController extends Controller
             $employees = json_decode(Yii::$app->request->post('employees'));
             // Переменная для хранения сообщений для всех сотрудников из списка оповещения
             $allMessages = '';
-            // Если существует файл с текстом шаблона сообщения, то определяем значение поля текста с этого файла
-            if (file_exists(Yii::$app->basePath . '/web/' . NotificationForm::MESSAGE_TEMPLATE_FILE_NAME)) {
-                // Получение текста шаблона сообщения
-                $messageTemplate = file_get_contents(Yii::$app->basePath . '/web/' .
-                    NotificationForm::MESSAGE_TEMPLATE_FILE_NAME);
+            // Текст сообщения введенного пользователем
+            $message = json_decode(Yii::$app->request->post('message'), true);
+            //
+            if ($message == null) {
+                // Если существует файл с текстом шаблона сообщения, то определяем значение поля текста с этого файла
+                if (file_exists(Yii::$app->basePath . '/web/' . NotificationForm::MESSAGE_TEMPLATE_FILE_NAME)) {
+                    // Получение текста шаблона сообщения
+                    $messageTemplate = file_get_contents(Yii::$app->basePath . '/web/' .
+                        NotificationForm::MESSAGE_TEMPLATE_FILE_NAME);
+                    // Обход всех сотрудников из списка оповещения
+                    foreach ($employees as $employee) {
+                        // Массив поисковых маркеров в тексте
+                        $search = array(
+                            NotificationForm::DATETIME_MARKER,
+                            NotificationForm::ADDRESS_MARKER,
+                            NotificationForm::WORK_TYPE_MARKER
+                        );
+                        // Формирование даты и времени
+                        $date = new DateTime($employee[3]->date);
+                        $startTime = new DateTime($employee[4]->date);
+                        $endTime = new DateTime($employee[5]->date);
+                        $dateTime = $date->format('d.m.Y') . '; ' . $startTime->format('H:i') . '-' .
+                            $endTime->format('H:i');
+                        // Массив замены
+                        $replace = array($dateTime, $employee[6], $employee[7]);
+                        // Формирование конкретного сообщения из шаблона путем замены подстрок
+                        $message = str_replace($search, $replace, $messageTemplate);
+                        // Запоминание текущего текста сообщения
+                        $allMessages .= $message;
+                    }
+                }
+            } else {
                 // Обход всех сотрудников из списка оповещения
                 foreach ($employees as $employee) {
-                    // Массив поисковых маркеров в тексте
-                    $search = array(
-                        NotificationForm::DATETIME_MARKER,
-                        NotificationForm::ADDRESS_MARKER,
-                        NotificationForm::WORK_TYPE_MARKER
-                    );
-                    // Формирование даты и времени
-                    $date = new DateTime($employee[3]->date);
-                    $startTime = new DateTime($employee[4]->date);
-                    $endTime = new DateTime($employee[5]->date);
-                    $dateTime = $date->format('d.m.Y') . '; ' . $startTime->format('H:i') . '-' .
-                        $endTime->format('H:i');
-                    // Массив замены
-                    $replace = array($dateTime, $employee[6], $employee[7]);
-                    // Формирование конкретного сообщения из шаблона путем замены подстрок
-                    $message = str_replace($search, $replace, $messageTemplate);
                     // Запоминание текущего текста сообщения
                     $allMessages .= $message;
                 }
@@ -690,22 +716,27 @@ class SiteController extends Controller
                 $employees = json_decode(Yii::$app->request->post('employees'));
                 // Обход всех сотрудников из списка оповещения
                 foreach ($employees as $employee) {
-                    // Массив поисковых маркеров в тексте
-                    $search = array(
-                        NotificationForm::DATETIME_MARKER,
-                        NotificationForm::ADDRESS_MARKER,
-                        NotificationForm::WORK_TYPE_MARKER
-                    );
-                    // Формирование даты и времени
-                    $date = new DateTime($employee[3]->date);
-                    $startTime = new DateTime($employee[4]->date);
-                    $endTime = new DateTime($employee[5]->date);
-                    $dateTime = $date->format('d.m.Y') . '; ' . $startTime->format('H:i') . '-' .
-                        $endTime->format('H:i');
-                    // Массив замены
-                    $replace = array($dateTime, $employee[6], $employee[7]);
-                    // Формирование конкретного сообщения из шаблона путем замены подстрок
-                    $message = str_replace($search, $replace, $notificationModel->messageTemplate);
+                    // Текст сообщения введенного пользователем
+                    $message = json_decode(Yii::$app->request->post('message'), true);
+                    // Если текст сообщения не передан, то форматирование текста на основе информации о сотрудниках
+                    if ($message == null) {
+                        // Массив поисковых маркеров в тексте
+                        $search = array(
+                            NotificationForm::DATETIME_MARKER,
+                            NotificationForm::ADDRESS_MARKER,
+                            NotificationForm::WORK_TYPE_MARKER
+                        );
+                        // Формирование даты и времени
+                        $date = new DateTime($employee[3]->date);
+                        $startTime = new DateTime($employee[4]->date);
+                        $endTime = new DateTime($employee[5]->date);
+                        $dateTime = $date->format('d.m.Y') . '; ' . $startTime->format('H:i') . '-' .
+                            $endTime->format('H:i');
+                        // Массив замены
+                        $replace = array($dateTime, $employee[6], $employee[7]);
+                        // Формирование конкретного сообщения из шаблона путем замены подстрок
+                        $message = str_replace($search, $replace, $notificationModel->messageTemplate);
+                    }
                     // Формирование параметров для POST-запроса к СМС-Органайзеру
                     $parameters = array(
                         'login' => NotificationForm::LOGIN,
@@ -928,6 +959,147 @@ class SiteController extends Controller
             'model' => $model,
             'currentBalance' => $currentBalance,
         ]);
+    }
+
+    public function actionGeneralInformation()
+    {
+        // Установка времени выполнения скрипта в 3 часа
+        set_time_limit(60 * 200);
+
+        // Пусть до папки с таблицами
+        $path = Yii::$app->basePath . '/web/spreadsheets/';
+
+        // Формирование модели (формы) CloudDriveForm
+        $cloudDriveModel = new CloudDriveForm();
+        // Если существует файл с путем к электронной таблице на Google-диске
+        if (file_exists(Yii::$app->basePath . '/web/' . CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME))
+            $cloudDriveModel->googleFileLink = file_get_contents(Yii::$app->basePath . '/web/' .
+                CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME);
+        // Если существует файл с путем к электронной таблице на Yandex-диске
+        if (file_exists(Yii::$app->basePath . '/web/' . CloudDriveForm::YANDEX_SPREADSHEET_FILE_NAME))
+            $cloudDriveModel->yandexFilePath = file_get_contents(Yii::$app->basePath . '/web/' .
+                CloudDriveForm::YANDEX_SPREADSHEET_FILE_NAME);
+
+        // Формирование модели (формы) NotificationForm
+        $notificationModel = new NotificationForm();
+        // Если существует файл с текстом шаблона общего сообщения сотрудникам,
+        // то определяем значение поля текста с этого файла
+        if (file_exists(Yii::$app->basePath . '/web/' . NotificationForm::GENERAL_MESSAGE_TEMPLATE_FILE_NAME))
+            $notificationModel->messageTemplate = file_get_contents(Yii::$app->basePath . '/web/' .
+                NotificationForm::GENERAL_MESSAGE_TEMPLATE_FILE_NAME);
+
+        // Формирование DataProvider для отображения списка сотрудников
+        $employees = new ArrayDataProvider([
+            'allModels' => array(),
+            'pagination' => [
+                'pageSize' => 10000,
+            ],
+        ]);
+
+        // Формирование модели (формы) NotificationResultForm
+        $notificationResultModel = new NotificationResultForm();
+
+        // Формирование параметров для POST-запроса к СМС-Органайзеру
+        $parameters = array('login' => NotificationForm::LOGIN, 'passwd' => NotificationForm::PASSWORD);
+        // Отправка POST-запроса СМС-Органайзеру для проверки баланса
+        $handle = curl_init();
+        curl_setopt($handle, CURLOPT_URL,NotificationForm::CHECK_BALANCE_LINK);
+        curl_setopt($handle, CURLOPT_POST, 1);
+        curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
+        curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+        $currentBalance = curl_exec($handle);
+        curl_close ($handle);
+        // Обработка приходящих ошибок
+        if ($currentBalance == -1 && $currentBalance == -2)
+            $currentBalance = 'не определен';
+
+        // Pjax-запрос
+        if (Yii::$app->request->isAjax) {
+            // Формирование полей модели (формы)
+            $cloudDriveModel->googleFileLink = Yii::$app->request->post('google-file-link');
+            $cloudDriveModel->fromDate = Yii::$app->request->post('from-date');
+            $cloudDriveModel->toDate = Yii::$app->request->post('to-date');
+            // Пусть до папки с файлом токена для доступа к Google-диску
+            $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
+            // Содание объекта для работы с Google-таблицей
+            $googleSpreadsheet = new GoogleSpreadsheet();
+            // Копирование Google-таблицы на сервер
+            $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer(
+                $googleOAuthPath,
+                Yii::$app->session,
+                $cloudDriveModel->googleFileLink,
+                $path
+            );
+            // Если нет ошибки при копировании электронной таблицы Google на сервер
+            if ($copyGoogleSuccess) {
+                // Формирование массива дат для выборки строк
+                $dates = $cloudDriveModel->getDates();
+                // Получение списка сотрудников для оповещения
+                $googleSpreadsheetRows = $googleSpreadsheet->getEmployeesList($path, $dates, true);
+                // Формирование массива для GridView
+                $googleArray = array();
+                foreach ($googleSpreadsheetRows as $googleSpreadsheetRow) {
+                    $arrayRow = array();
+                    foreach ($googleSpreadsheetRow as $key => $googleSpreadsheetCell)
+                        array_push($arrayRow, $googleSpreadsheetCell);
+                    array_push($googleArray, $arrayRow);
+                }
+                $employees = new ArrayDataProvider([
+                    'allModels' => $googleArray,
+                    'pagination' => [
+                        'pageSize' => 10000,
+                    ],
+                ]);
+            }
+        }
+
+        return $this->render('general-information', [
+            'cloudDriveModel' => $cloudDriveModel,
+            'notificationModel' => $notificationModel,
+            'employees' => $employees,
+            'notificationResultModel' => $notificationResultModel,
+            'currentBalance' => $currentBalance,
+        ]);
+    }
+
+    /**
+     * Сохранение шаблона текста общего сообщения для оповещения всех сотрудников.
+     *
+     * @return bool|\yii\console\Response|Response
+     * @throws \Exception
+     */
+    public function actionSaveGeneralMessageTemplate()
+    {
+        // Ajax-запрос
+        if (Yii::$app->request->isAjax) {
+            // Определение массива возвращаемых данных
+            $data = array();
+            // Установка формата JSON для возвращаемых данных
+            $response = Yii::$app->response;
+            $response->format = Response::FORMAT_JSON;
+            // Формирование модели (формы) NotificationForm
+            $notificationModel = new NotificationForm();
+            // Определение полей модели (формы) оповещения и валидация формы
+            if ($notificationModel->load(Yii::$app->request->post()) && $notificationModel->validate()) {
+                // Успешный ввод данных
+                $data['success'] = true;
+                // Пусть до папки с текстовым файлом шаблона сообщения
+                $path = Yii::$app->basePath . '/web/';
+                // Открытие файла на запись для сохранения шаблона сообщения
+                $file = fopen($path . NotificationForm::GENERAL_MESSAGE_TEMPLATE_FILE_NAME, 'w');
+                // Запись в файл текста шаблона сообщения
+                fwrite($file, $notificationModel->messageTemplate);
+                // Закрытие файла
+                fclose($file);
+            } else
+                $data = ActiveForm::validate($notificationModel);
+            // Возвращение данных
+            $response->data = $data;
+
+            return $response;
+        }
+
+        return false;
     }
 
     /**
