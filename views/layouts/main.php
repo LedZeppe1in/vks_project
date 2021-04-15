@@ -105,9 +105,17 @@ AppAsset::register($this);
 
 <footer class="footer">
     <div class="container">
-        <p class="pull-left"> &copy; <?= date('Y') ?>
-            <?= Html::a('ООО "ВКС"', 'http://koopwork.ru/o-kompanii/') ?></p>
-        <p class="pull-right">Разработано <?= Html::a('ООО "ЦентраСиб"', 'http://centrasib.ru') ?></p>
+        <div class="row footer-information">
+            <div class="col-sm-6">
+                &copy; <?= date('Y') ?> <?= Html::a('ООО «ВКС»', 'http://koopwork.ru/o-kompanii/') ?>
+                , 105425, г. Москва, ул. 3-я Парковая, 41а.
+                <div>тел.: <a href="tel:8 (495) 740-98-28">8 (495) 740-98-28</a>, <a href="tel:8 (800) 444-41-02">8 (800) 444-41-02</a><br /></div>
+                <a href="mailto:info@koopwork.ru">info@koopwork.ru</a><br />
+            </div>
+            <div class="col-sm-6" style="float: right; text-align: right">
+                Разработано <?= Html::a('ООО "ЦентраСиб"', 'http://centrasib.ru') ?>
+            </div>
+        </div><br />
     </div>
 </footer>
 

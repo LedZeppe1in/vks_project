@@ -599,7 +599,7 @@ class SiteController extends Controller
                     // Если выбран режим оповещения всех сотрудников
                     if ($allEmployees == true) {
                         // Текст сообщения введенного пользователем
-                        $message = json_decode(Yii::$app->request->post('message'), true);
+                        $message = json_decode(Yii::$app->request->post('message'));
                         // Обход всех сотрудников из списка оповещения
                         foreach ($employees as $employee) {
                             // Запоминание текущего текста сообщения
@@ -607,7 +607,7 @@ class SiteController extends Controller
                         }
                     }
                     // Формирование объема рассылки
-                    $data['mailingVolume'] = round(strlen($allMessages) / 67);
+                    $data['mailingVolume'] = ceil(mb_strlen($allMessages) / 67);
                 } else
                     // Наличие ошибки при копировании файла электронной таблицы
                     $data['copyError'] = true;
@@ -680,7 +680,7 @@ class SiteController extends Controller
                 }
             }
             // Формирование объема рассылки
-            $data['mailingVolume'] = round(strlen($allMessages) / 67);
+            $data['mailingVolume'] = ceil(mb_strlen($allMessages) / 67);
             // Возвращение данных
             $response->data = $data;
 

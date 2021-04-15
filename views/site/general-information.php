@@ -22,47 +22,51 @@ use yii\bootstrap\ActiveForm;
 <!-- JS-скрипт -->
 <script type="text/javascript">
     // Переменная для хранения общего объема рассылки
-    let fullMailingVolume;
+    let fullMailingVolume = null;
     // Переменная для хранения списка сотрудников
-    let employees;
+    let employees = null;
 
     // Обработка выбора общего чекбокса в GridView
     function checkAllEmployees(item_id, checked) {
+        // Слой с отображением общего объема рассылки для всех сотрудников
+        let fullMailingVolumeTitle = document.getElementById("full-mailing-volume");
         // Слой с отображением объема рассылки для выбранных сотрудников
         let customMailingVolumeTitle = document.getElementById("custom-mailing-volume");
         // Определение состояния чекбокса
-        if (checked === true)
-            customMailingVolumeTitle.innerHTML = fullMailingVolume;
-        else
+        if (checked === true) {
+            if (fullMailingVolume !== null) {
+                // Текст сообщения сотрудникам
+                let message = document.getElementById("notificationform-messagetemplate").value;
+                // Общий текст всех сообщений
+                let allMessages = "";
+                for (let i = 0; i < employees.length; i++)
+                    allMessages += message;
+                // Определение объема рассылки
+                fullMailingVolume = Math.ceil(allMessages.length / 67);
+                // Вывод объема рассылки
+                fullMailingVolumeTitle.innerHTML = fullMailingVolume;
+                customMailingVolumeTitle.innerHTML = fullMailingVolume;
+            }
+        } else
             customMailingVolumeTitle.innerHTML = "0";
     }
 
     // Обработка выбора индивидуального чекбокса в GridView
     function checkEmployee(item_id, checked) {
-        // Формирование массива с выбранными сотрудниками
-        let checked_employees = [];
-        employees.forEach(function(item, i) {
-            if (document.querySelectorAll("input[type='checkbox']")[i + 1].checked)
-                checked_employees.push(item);
-        });
+        // Слой с отображением объема рассылки для выбранных сотрудников
+        let customMailingVolumeTitle = document.getElementById("custom-mailing-volume");
         // Текст сообщения сотрудникам
         let message = document.getElementById("notificationform-messagetemplate").value;
-        // Ajax-запрос
-        $.ajax({
-            url: "<?= Yii::$app->request->baseUrl . '/get-mailing-volume' ?>",
-            type: "post",
-            data: "employees=" + JSON.stringify(checked_employees) + "&message=" + JSON.stringify(message),
-            dataType: "json",
-            success: function(data) {
-                // Слой с отображением объема рассылки для выбранных сотрудников
-                let customMailingVolumeTitle = document.getElementById("custom-mailing-volume");
-                // Отображение текущего объема рассылки для выбранных сотрудников
-                customMailingVolumeTitle.innerHTML = data["mailingVolume"];
-            },
-            error: function() {
-                alert("Непредвиденная ошибка!");
-            }
+        // Общий текст всех сообщений
+        let allMessages = "";
+        employees.forEach(function(item, i) {
+           if (document.querySelectorAll("input[type='checkbox']")[i + 1].checked)
+               allMessages += message;
         });
+        // Определение объема рассылки
+        fullMailingVolume = Math.ceil(allMessages.length / 67);
+        // Вывод объема рассылки
+        customMailingVolumeTitle.innerHTML = fullMailingVolume;
     }
 
     // Выполнение скрипта при загрузке страницы
@@ -138,7 +142,7 @@ use yii\bootstrap\ActiveForm;
                                 // Формирование списка сотрудников для оповещения
                                 employees = data["employees"];
                                 // Формирование информации об общем объеме рассылки для всех сотрудников
-                                fullMailingVolume = data["mailingVolume"]
+                                fullMailingVolume = data["mailingVolume"];
                                 fullMailingVolumeTitle.innerHTML = fullMailingVolume;
                             } else {
                                 // Активация слоя с сообщением о не успешном формировании списка сотрудников для оповещения
