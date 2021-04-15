@@ -3,6 +3,7 @@
 namespace app\controllers;
 
 use app\models\BalanceForm;
+use DateInterval;
 use Yii;
 use DateTime;
 use Exception;
@@ -553,8 +554,8 @@ class SiteController extends Controller
                     $employees = $googleSpreadsheet->getEmployeesList($path, $dates, $allEmployees);
                     // Формирование списка сотрудников для оповещения
                     $data['employees'] = $employees;
-                    // Переменная для хранения сообщений для всех сотрудников из списка оповещения
-                    $allMessages = '';
+                    // Переменная для хранения объема рассылки
+                    $mailingVolume = 0;
                     // Если выбран режим оповещения сотрудников по утвержденным заявкам
                     if ($allEmployees == false) {
                         // Если существует файл с текстом шаблона сообщения,
@@ -579,8 +580,8 @@ class SiteController extends Controller
                                 $replace = array($dateTime, $employee[6], $employee[7]);
                                 // Формирование конкретного сообщения из шаблона путем замены подстрок
                                 $message = str_replace($search, $replace, $messageTemplate);
-                                // Запоминание текущего текста сообщения
-                                $allMessages .= $message;
+                                // Вычисление объема рассылки
+                                $mailingVolume += ceil(mb_strlen($message) / 67);
                             }
                         }
                         // Формирование параметров для POST-запроса к СМС-Органайзеру
@@ -602,12 +603,12 @@ class SiteController extends Controller
                         $message = json_decode(Yii::$app->request->post('message'));
                         // Обход всех сотрудников из списка оповещения
                         foreach ($employees as $employee) {
-                            // Запоминание текущего текста сообщения
-                            $allMessages .= $message;
+                            // Вычисление объема рассылки
+                            $mailingVolume += ceil(mb_strlen($message) / 67);;
                         }
                     }
                     // Формирование объема рассылки
-                    $data['mailingVolume'] = ceil(mb_strlen($allMessages) / 67);
+                    $data['mailingVolume'] = $mailingVolume;
                 } else
                     // Наличие ошибки при копировании файла электронной таблицы
                     $data['copyError'] = true;
@@ -639,11 +640,11 @@ class SiteController extends Controller
             $response->format = Response::FORMAT_JSON;
             // Получение списка сотрудников для оповещения
             $employees = json_decode(Yii::$app->request->post('employees'));
-            // Переменная для хранения сообщений для всех сотрудников из списка оповещения
-            $allMessages = '';
+            // Переменная для хранения объема рассылки
+            $mailingVolume = 0;
             // Текст сообщения введенного пользователем
             $message = json_decode(Yii::$app->request->post('message'), true);
-            //
+            // Если текст сообщения не передан
             if ($message == null) {
                 // Если существует файл с текстом шаблона сообщения, то определяем значение поля текста с этого файла
                 if (file_exists(Yii::$app->basePath . '/web/' . NotificationForm::MESSAGE_TEMPLATE_FILE_NAME)) {
@@ -668,19 +669,19 @@ class SiteController extends Controller
                         $replace = array($dateTime, $employee[6], $employee[7]);
                         // Формирование конкретного сообщения из шаблона путем замены подстрок
                         $message = str_replace($search, $replace, $messageTemplate);
-                        // Запоминание текущего текста сообщения
-                        $allMessages .= $message;
+                        // Вычисление объема рассылки
+                        $mailingVolume += ceil(mb_strlen($message) / 67);
                     }
                 }
             } else {
                 // Обход всех сотрудников из списка оповещения
                 foreach ($employees as $employee) {
                     // Запоминание текущего текста сообщения
-                    $allMessages .= $message;
+                    $mailingVolume += ceil(mb_strlen($message) / 67);
                 }
             }
             // Формирование объема рассылки
-            $data['mailingVolume'] = ceil(mb_strlen($allMessages) / 67);
+            $data['mailingVolume'] = $mailingVolume;
             // Возвращение данных
             $response->data = $data;
 
@@ -833,7 +834,69 @@ class SiteController extends Controller
     public function actionCheckMessageStatus()
     {
         $model = new NotificationResultForm();
+
         if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            // Получение даты недели назад от текущей
+            $date = new DateTime();
+            $newDate = $date->sub(new DateInterval('P8D'));
+            $dateStart = $newDate->format('Y-m-d H:i:s');
+            // Формирование параметров для POST-запроса к СМС-Органайзеру
+            $parameters = array(
+                'login' => NotificationForm::LOGIN,
+                'passwd' => NotificationForm::PASSWORD,
+                'date_start' => $dateStart,
+                'date_end' => date("Y-m-d", time() + 86400)
+            );
+            // Отправка POST-запроса СМС-Органайзеру для проверки статусов сообщений
+            $handle = curl_init();
+            curl_setopt($handle, CURLOPT_URL, NotificationForm::CHECK_MESSAGE_STATUS_LINK);
+            curl_setopt($handle, CURLOPT_POST, 1);
+            curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($parameters));
+            curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($handle);
+            curl_close($handle);
+            // Переменные для статистики сообщений
+            $deliveredMessageNumber = 0;
+            $rejectedMessageNumber = 0;
+            $currentDate = null;
+            $weekDays = array();
+            $deliveredMessageNumberPerWeek = array();
+            $rejectedMessageNumberPerWeek = array();
+            // Определение статистики сообщений на неделю
+            $responseArray = explode('^', $response);
+            foreach ($responseArray as $item) {
+                if (!empty($item)) {
+                    $parts = explode('~', $item);
+                    foreach ($parts as $key => $part) {
+                        $values = explode('=', $part);
+                        if (isset($values[1])) {
+                            $strReplace = str_replace('++', ' ', $values[1]);
+                            if ($key == 2) {
+                                $dateTime = new DateTime($strReplace);
+                                $formattedDateTime = $dateTime->format('d.m.Y');
+                                if ($currentDate != $formattedDateTime) {
+                                    if ($currentDate != null) {
+                                        array_push($deliveredMessageNumberPerWeek, $deliveredMessageNumber);
+                                        array_push($rejectedMessageNumberPerWeek, $rejectedMessageNumber);
+                                    }
+                                    $currentDate = $formattedDateTime;
+                                    $deliveredMessageNumber = 0;
+                                    $rejectedMessageNumber = 0;
+                                    array_push($weekDays, $currentDate);
+                                }
+                            }
+                            if ($key == 3 && $strReplace == 1)
+                                $deliveredMessageNumber++;
+                            if (($key == 3 && $strReplace == 0) || ($key == 3 && $strReplace == 4) ||
+                                ($key == 3 && $strReplace == 5) || ($key == 3 && $strReplace == 6))
+                                $rejectedMessageNumber++;
+                        }
+                    }
+                }
+            }
+            array_push($deliveredMessageNumberPerWeek, $deliveredMessageNumber);
+            array_push($rejectedMessageNumberPerWeek, $rejectedMessageNumber);
+
             // Формирование параметров для POST-запроса к СМС-Органайзеру
             $parameters = array(
                 'login' => NotificationForm::LOGIN,
@@ -897,6 +960,9 @@ class SiteController extends Controller
                 'deliveredMessageNumber' => $deliveredMessageNumber,
                 'sentAndQueueMessageNumber' => $sentAndQueueMessageNumber,
                 'allRejectedMessageNumber' => $allRejectedMessageNumber,
+                'deliveredMessageNumberPerWeek' => $deliveredMessageNumberPerWeek,
+                'rejectedMessageNumberPerWeek' => $rejectedMessageNumberPerWeek,
+                'weekDays' => $weekDays
             ]);
         }
 

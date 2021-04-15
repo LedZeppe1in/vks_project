@@ -51,9 +51,9 @@ use yii\bootstrap\ActiveForm;
 
         <?= $form->field($model, 'email')->textInput(); ?>
 
-        <p>
+        <span class="badge" style="margin-bottom: 10px;">
             Пожалуйста, укажите адрес электронной почты, куда будет отправлен счет на пополнение баланса.
-        </p>
+        </span>
 
         <div class="form-group">
             <?= Html::submitButton('<span class="glyphicon glyphicon-ok"></span> Пополнить',

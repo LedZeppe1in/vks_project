@@ -37,12 +37,10 @@ use yii\bootstrap\ActiveForm;
             if (fullMailingVolume !== null) {
                 // Текст сообщения сотрудникам
                 let message = document.getElementById("notificationform-messagetemplate").value;
-                // Общий текст всех сообщений
-                let allMessages = "";
-                for (let i = 0; i < employees.length; i++)
-                    allMessages += message;
                 // Определение объема рассылки
-                fullMailingVolume = Math.ceil(allMessages.length / 67);
+                fullMailingVolume = 0;
+                for (let i = 0; i < employees.length; i++)
+                    fullMailingVolume += Math.ceil(message.length / 67);
                 // Вывод объема рассылки
                 fullMailingVolumeTitle.innerHTML = fullMailingVolume;
                 customMailingVolumeTitle.innerHTML = fullMailingVolume;
@@ -57,14 +55,12 @@ use yii\bootstrap\ActiveForm;
         let customMailingVolumeTitle = document.getElementById("custom-mailing-volume");
         // Текст сообщения сотрудникам
         let message = document.getElementById("notificationform-messagetemplate").value;
-        // Общий текст всех сообщений
-        let allMessages = "";
+        // Определение объема рассылки
+        fullMailingVolume = 0;
         employees.forEach(function(item, i) {
            if (document.querySelectorAll("input[type='checkbox']")[i + 1].checked)
-               allMessages += message;
+               fullMailingVolume += Math.ceil(message.length / 67);
         });
-        // Определение объема рассылки
-        fullMailingVolume = Math.ceil(allMessages.length / 67);
         // Вывод объема рассылки
         customMailingVolumeTitle.innerHTML = fullMailingVolume;
     }
