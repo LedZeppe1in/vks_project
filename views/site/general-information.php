@@ -254,7 +254,8 @@ use yii\bootstrap\ActiveForm;
             $.ajax({
                 url: "<?= Yii::$app->request->baseUrl . '/notify-employees' ?>",
                 type: "post",
-                data: form.serialize() + "&employees=" + JSON.stringify(checked_employees) + JSON.stringify(message),
+                data: form.serialize() + "&employees=" + JSON.stringify(checked_employees) +
+                    "&message=" + JSON.stringify(message),
                 dataType: "json",
                 success: function(data) {
                     // Если валидация прошла успешно (нет ошибок ввода)
@@ -273,6 +274,7 @@ use yii\bootstrap\ActiveForm;
                         }
                         // Деактивация всех слоев с сообщениями
                         saveFileSuccessMessage.style.display = "none";
+                        employeesSuccessMessage.style.display = "none";
                         // Если нет ошибок, то вывод текущего баланса
                         if (data["balance"] !== '-1' && data["balance"] !== '-2')
                             currentBalanceTitle.innerHTML = data["balance"] + " СМС";
@@ -432,7 +434,7 @@ use yii\bootstrap\ActiveForm;
 
             <div class="form-group">
                 <?= Button::widget([
-                    'label' => '<span class="glyphicon glyphicon-list-alt"></span> Сформировать список рассылки',
+                    'label' => '<span class="glyphicon glyphicon-list-alt"></span> Получить список всех сотрудников',
                     'encodeLabel' => false,
                     'options' => [
                         'id' => 'mailing-button',
