@@ -897,6 +897,34 @@ class SiteController extends Controller
             array_push($deliveredMessageNumberPerWeek, $deliveredMessageNumber);
             array_push($rejectedMessageNumberPerWeek, $rejectedMessageNumber);
 
+            $employees = array();
+            // Формирование модели (формы) CloudDriveForm
+            $cloudDriveModel = new CloudDriveForm();
+            // Если существует файл с путем к электронной таблице на Google-диске
+            if (file_exists(Yii::$app->basePath . '/web/' . CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME)) {
+                // Получение ссылки к электронной таблице на Google-диске
+                $cloudDriveModel->googleFileLink = file_get_contents(Yii::$app->basePath . '/web/' .
+                    CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME);
+                // Пусть до папки с таблицами
+                $path = Yii::$app->basePath . '/web/spreadsheets/';
+                // Пусть до папки с файлом токена для доступа к Google-диску
+                $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
+                // Содание объекта для работы с Google-таблицей
+                $googleSpreadsheet = new GoogleSpreadsheet();
+                // Копирование Google-таблицы на сервер
+                $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer(
+                    $googleOAuthPath,
+                    Yii::$app->session,
+                    $cloudDriveModel->googleFileLink,
+                    $path
+                );
+                // Если нет ошибки при копировании электронной таблицы Google на сервер
+                if ($copyGoogleSuccess) {
+                    // Получение списка сотрудников для оповещения
+                    $employees = $googleSpreadsheet->getEmployeesList($path, [], true);
+                }
+            }
+
             // Формирование параметров для POST-запроса к СМС-Органайзеру
             $parameters = array(
                 'login' => NotificationForm::LOGIN,
@@ -932,6 +960,19 @@ class SiteController extends Controller
                                 array_push($currentValues, $dateTime->format('d.m.Y H:i'));
                             } else
                                 array_push($currentValues, $strReplace);
+
+                            // Если сформирован список всех сотрудников, то добавление ФИО в массив для GridView
+                            if (!empty($employees))
+                                foreach ($employees as $employee) {
+                                    $foo = null;
+                                    foreach ($employee as $key_e => $value_e) {
+                                        if ($key_e == 0)
+                                            $foo = $value_e;
+                                        if ($key_e == 2 && $key == 0 && $value_e == $strReplace)
+                                            array_push($currentValues, $foo);
+                                    }
+                                }
+
                             // Определение статистики сообщений
                             if ($key == 3 && $strReplace == 1)
                                 $deliveredMessageNumber++;

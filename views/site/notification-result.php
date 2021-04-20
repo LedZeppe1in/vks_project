@@ -104,19 +104,23 @@ use app\models\NotificationResultForm;
                     'attribute' => '0',
                 ],
                 [
-                    'label' => 'Текст сообщения',
+                    'label' => 'ФИО',
                     'attribute' => '1',
                 ],
                 [
-                    'label' => 'Дата отправки',
+                    'label' => 'Текст сообщения',
                     'attribute' => '2',
                 ],
                 [
-                    'label' => 'Статус',
+                    'label' => 'Дата отправки',
                     'attribute' => '3',
+                ],
+                [
+                    'label' => 'Статус',
+                    'attribute' => '4',
                     'format' => 'raw',
                     'value' => function($data) {
-                        return (isset($data['3'])) ? NotificationResultForm::getStatusName($data['3']) : '';
+                        return (isset($data['4'])) ? NotificationResultForm::getStatusName($data['4']) : '';
                     },
                 ],
             ],
