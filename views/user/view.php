@@ -11,6 +11,8 @@ $this->params['breadcrumbs'][] = ['label' => 'Пользователи', 'url' =
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 
+<?= $this->render('_modal_form', ['model' => $model]) ?>
+
 <div class="user-view">
 
     <h1><?= Html::encode($this->title) ?></h1>
@@ -18,12 +20,10 @@ $this->params['breadcrumbs'][] = $this->title;
     <p>
         <?= Html::a('<span class="glyphicon glyphicon-pencil"></span> Обновить', ['update', 'id' => $model->id],
             ['class' => 'btn btn-primary']) ?>
-        <?= Html::a('<span class="glyphicon glyphicon-trash"></span> Удалить', ['delete', 'id' => $model->id], [
+        <?= Html::a('<span class="glyphicon glyphicon-trash"></span> Удалить', '#', [
             'class' => 'btn btn-danger',
-            'data' => [
-                'confirm' => 'Вы уверены, что хотите удалить этого пользователя?',
-                'method' => 'post',
-            ],
+            'data-toggle' => 'modal',
+            'data-target' => '#removeUserModalForm'
         ]) ?>
     </p>
 
