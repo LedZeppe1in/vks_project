@@ -3,6 +3,7 @@
 /* @var $this \yii\web\View */
 /* @var $content string */
 
+use app\models\User;
 use app\widgets\Alert;
 use yii\helpers\Html;
 use yii\bootstrap\Nav;
@@ -44,11 +45,11 @@ AppAsset::register($this);
         'options' => ['class' => 'navbar-nav navbar-left'],
         'encodeLabels' => false,
         'items' => [
-            Yii::$app->user->isGuest ? '' : [
+            (Yii::$app->user->isGuest || Yii::$app->user->identity->status == User::STATUS_INACTIVE) ? '' : [
                 'label' => '<span class="glyphicon glyphicon-refresh"></span> Синхронизация данных',
                 'url' => ['/site/data-synchronization']
             ],
-            Yii::$app->user->isGuest ? '' : [
+            (Yii::$app->user->isGuest || Yii::$app->user->identity->status == User::STATUS_INACTIVE) ? '' : [
                 'label' => '<span class="glyphicon glyphicon-envelope"></span> СМС-Органайзер',
                 'url' => '#',
                 'items' => [
@@ -66,6 +67,12 @@ AppAsset::register($this);
                     ]
                 ]
             ],
+            (!Yii::$app->user->isGuest && Yii::$app->user->identity->role == User::ROLE_ADMINISTRATOR &&
+                Yii::$app->user->identity->status == User::STATUS_ACTIVE) ?
+                [
+                    'label' => '<span class="glyphicon glyphicon-user"></span> Пользователи',
+                    'url' => ['/user/list']
+                ] : '',
             [
                 'label' => '<span class="glyphicon glyphicon-bullhorn"></span> Политика конфиденциальности',
                 'url' => ['/site/privacy-policy']
@@ -76,19 +83,22 @@ AppAsset::register($this);
         'options' => ['class' => 'navbar-nav navbar-right'],
         'encodeLabels' => false,
         'items' => [
-            Yii::$app->user->isGuest ? [
-                'label' => '<span class="glyphicon glyphicon-log-in"></span> Вход',
-                'url' => ['/site/login']
-            ] : (
-                '<li>'
-                . Html::beginForm(['/site/logout'], 'post')
-                . Html::submitButton(
-                    '<span class="glyphicon glyphicon-log-out"></span> ' . 'Выход (' .
-                    Yii::$app->user->identity->username . ')', ['class' => 'btn btn-link logout']
-                )
-                . Html::endForm()
-                . '</li>'
-            )
+            Yii::$app->user->isGuest ?
+                [
+                    'label' => '<span class="glyphicon glyphicon-log-in"></span> Вход',
+                    'url' => ['/site/sing-in']
+                ] : [
+                    'label' => '<span class="glyphicon glyphicon-home"></span> Аккаунт',
+                    'url' => ['#'], 'items' => [
+                        ['label' => 'Добро пожаловать,'],
+                        ['label' => '<b style="font-size:small">' . Yii::$app->user->identity->username . '</b>'],
+                        '<li class="divider"></li>',
+                        ['label' => '<span class="glyphicon glyphicon-bookmark"></span> Профиль',
+                            'url' => '/user/profile/' . Yii::$app->user->identity->getId()],
+                        ['label' => '<span class="glyphicon glyphicon-log-out"></span> Выход',
+                            'url' => ['/site/sing-out'], 'linkOptions' => ['data-method' => 'post']]
+                    ],
+                ],
         ],
     ]);
     NavBar::end();

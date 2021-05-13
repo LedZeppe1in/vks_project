@@ -2,11 +2,10 @@
 
 namespace app\controllers;
 
-use app\models\BalanceForm;
-use DateInterval;
 use Yii;
 use DateTime;
 use Exception;
+use DateInterval;
 use yii\web\Response;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
@@ -16,6 +15,7 @@ use yii\data\ArrayDataProvider;
 use app\models\User;
 use app\models\LoginForm;
 use app\models\ContactForm;
+use app\models\BalanceForm;
 use app\models\CloudDriveForm;
 use app\models\NotificationForm;
 use app\components\GoogleSpreadsheet;
@@ -32,11 +32,11 @@ class SiteController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::className(),
-                'only' => ['logout', 'contact', 'checking', 'save-paths', 'get-mailing-list', 'save-message-template',
+                'only' => ['sing-out', 'contact', 'checking', 'save-paths', 'get-mailing-list', 'save-message-template',
                     'notify-employees', 'check-message-status', 'data-synchronization', 'balance-replenishment'],
                 'rules' => [
                     [
-                        'actions' => ['logout', 'contact', 'checking', 'save-paths', 'get-mailing-list',
+                        'actions' => ['sing-out', 'contact', 'checking', 'save-paths', 'get-mailing-list',
                             'save-message-template', 'notify-employees', 'check-message-status', 'data-synchronization',
                             'balance-replenishment'],
                         'allow' => true,
@@ -47,7 +47,7 @@ class SiteController extends Controller
             'verbs' => [
                 'class' => VerbFilter::className(),
                 'actions' => [
-                    'logout' => ['post'],
+                    'logout' => ['POST'],
                 ],
             ],
         ];
@@ -1210,15 +1210,15 @@ class SiteController extends Controller
     }
 
     /**
-     * Login action.
+     * Страница входа.
      *
      * @return Response|string
      */
-    public function actionLogin()
+    public function actionSingIn()
     {
-        if (!Yii::$app->user->isGuest) {
+        if (!Yii::$app->user->isGuest)
             return $this->goHome();
-        }
+
         $model = new LoginForm();
         if ($model->load(Yii::$app->request->post())) {
             $parameters = array(
@@ -1232,25 +1232,25 @@ class SiteController extends Controller
             curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
             $response = curl_exec($handle);
             curl_close($handle);
-            if ($response) $model->login();
-            return $this->goBack();
+            if ($response && $model->login())
+                return $this->goBack();
         }
         $model->password = '';
-        return $this->render('login', [
+        return $this->render('sing-in', [
             'model' => $model,
         ]);
     }
 
     /**
-     * Logout action.
+     * Действие выхода.
      *
      * @return Response
      */
-    public function actionLogout()
+    public function actionSingOut()
     {
         Yii::$app->user->logout();
 
-        return $this->redirect('login');
+        return $this->goHome();
     }
 
     /**
