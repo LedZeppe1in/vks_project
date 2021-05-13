@@ -8,6 +8,7 @@ use yii\helpers\Html;
 use yii\bootstrap\ActiveForm;
 
 $this->title = 'Вход';
+$this->params['breadcrumbs'][] = $this->title;
 ?>
 
 <div class="sing-in">

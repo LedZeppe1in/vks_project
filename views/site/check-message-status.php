@@ -3,6 +3,7 @@
 /* @var $model app\models\NotificationResultForm */
 
 $this->title = 'Проверка статусов сообщений за определенный период';
+$this->params['breadcrumbs'][] = $this->title;
 
 use yii\helpers\Html;
 use yii\bootstrap\ActiveForm;

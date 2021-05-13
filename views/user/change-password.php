@@ -6,6 +6,8 @@ use yii\helpers\Html;
 /* @var $model app\models\User */
 
 $this->title = 'Поменять пароль';
+$this->params['breadcrumbs'][] = ['label' => 'Профиль', 'url' => ['profile', 'id' => $model->id]];
+$this->params['breadcrumbs'][] = 'Поменять пароль для: ' . $model->username;
 ?>
 
 <div class="change-password">

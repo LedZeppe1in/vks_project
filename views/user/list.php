@@ -9,6 +9,7 @@ use yii\grid\GridView;
 /* @var $dataProvider yii\data\ActiveDataProvider */
 
 $this->title = 'Пользователи';
+$this->params['breadcrumbs'][] = $this->title;
 ?>
 
 <div class="user-list">
@@ -24,7 +25,10 @@ $this->title = 'Пользователи';
         'dataProvider' => $dataProvider,
         'filterModel' => $searchModel,
         'columns' => [
-            'id',
+            [
+                'attribute' => 'id',
+                'headerOptions' => ['style' => 'width:5%'],
+            ],
             'username',
             [
                 'attribute'=>'role',

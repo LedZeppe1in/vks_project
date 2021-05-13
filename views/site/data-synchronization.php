@@ -6,6 +6,7 @@
 /* @var $employees app\models\NotificationForm */
 
 $this->title = 'Синхронизация данных';
+$this->params['breadcrumbs'][] = $this->title;
 
 use yii\helpers\Html;
 use yii\bootstrap\Tabs;

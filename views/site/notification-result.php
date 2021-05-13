@@ -10,6 +10,7 @@
 /* @var $weekDays app\controllers\SiteController */
 
 $this->title = 'Результаты информирования';
+$this->params['breadcrumbs'][] = $this->title;
 
 use yii\helpers\Html;
 use yii\grid\GridView;

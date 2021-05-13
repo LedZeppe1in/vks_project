@@ -7,6 +7,7 @@
 /* @var $currentBalance app\controllers\SiteController */
 
 $this->title = 'Общее информирование';
+$this->params['breadcrumbs'][] = $this->title;
 
 use kartik\date\DatePicker;
 use yii\helpers\Html;

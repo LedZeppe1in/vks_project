@@ -6,6 +6,8 @@ use yii\helpers\Html;
 /* @var $model app\models\User */
 
 $this->title = 'Создание нового пользователя';
+$this->params['breadcrumbs'][] = ['label' => 'Пользователи', 'url' => ['list']];
+$this->params['breadcrumbs'][] = $this->title;
 ?>
 
 <div class="create-new-user">

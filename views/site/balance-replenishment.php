@@ -4,6 +4,7 @@
 /* @var $currentBalance app\controllers\SiteController */
 
 $this->title = 'Запрос счета на пополнение баланса';
+$this->params['breadcrumbs'][] = $this->title;
 
 use yii\helpers\Html;
 use yii\bootstrap\ActiveForm;
