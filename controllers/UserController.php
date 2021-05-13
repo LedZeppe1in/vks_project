@@ -3,12 +3,12 @@
 namespace app\controllers;
 
 use Yii;
-use yii\data\ActiveDataProvider;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
 use app\models\User;
+use app\models\UserSearch;
 
 /**
  * UserController implements the CRUD actions for User model.
@@ -51,11 +51,11 @@ class UserController extends Controller
      */
     public function actionList()
     {
-        $dataProvider = new ActiveDataProvider([
-            'query' => User::find(),
-        ]);
+        $searchModel = new UserSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->get());
 
         return $this->render('list', [
+            'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
         ]);
     }

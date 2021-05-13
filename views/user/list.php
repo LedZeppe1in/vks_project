@@ -1,9 +1,11 @@
 <?php
 
+use app\models\User;
 use yii\helpers\Html;
 use yii\grid\GridView;
 
 /* @var $this yii\web\View */
+/* @var $searchModel app\models\UserSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
 
 $this->title = 'Пользователи';
@@ -20,6 +22,7 @@ $this->title = 'Пользователи';
 
     <?= GridView::widget([
         'dataProvider' => $dataProvider,
+        'filterModel' => $searchModel,
         'columns' => [
             'id',
             'username',
@@ -28,14 +31,16 @@ $this->title = 'Пользователи';
                 'value' => function($data) {
                     return ($data->role !== null) ? $data->getRoleName(true) : null;
                 },
-                'format' => 'raw'
+                'format' => 'raw',
+                'filter' => User::getRoles(false)
             ],
             [
                 'attribute'=>'status',
                 'value' => function($data) {
                     return ($data->status !== null) ? $data->getStatusName(true) : null;
                 },
-                'format' => 'raw'
+                'format' => 'raw',
+                'filter' => User::getStatuses(false)
             ],
             [
                 'attribute'=>'full_name',
