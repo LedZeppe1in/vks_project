@@ -32,7 +32,6 @@ $config = [
                 '/user/<_usr:(list|create)>' => 'user/<_usr>',
                 '/user/<_usr:(view|update|delete|profile|update-profile|change-password)>/<id:\d+>' => 'user/<_usr>',
                 'privacy-policy' => 'site/privacy-policy',
-                'contact' => 'site/contact',
                 'checking' => 'site/checking',
                 'save-paths' => 'site/save-paths',
                 'get-mailing-list' => 'site/get-mailing-list',

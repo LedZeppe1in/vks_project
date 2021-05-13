@@ -161,8 +161,11 @@ class SiteController extends Controller
     {
         // Установка времени выполнения скрипта в 3 часа
         set_time_limit(60 * 200);
-        // Пусть до папки с таблицами
-        $path = Yii::$app->basePath . '/web/spreadsheets/';
+        // Пусть до папки с таблицами на сервере для авторизованного пользователя
+        $path = Yii::$app->basePath . '/web/spreadsheets/' . Yii::$app->user->identity->username . '/';
+        // Создание директории
+        if (!file_exists($path))
+            mkdir($path, 0777, true);
         // Формирование модели (формы) CloudDriveForm
         $cloudDriveModel = new CloudDriveForm();
         // Если существует файл с путем к электронной таблице на Google-диске
@@ -1251,24 +1254,6 @@ class SiteController extends Controller
         Yii::$app->user->logout();
 
         return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
-        }
-        return $this->render('contact', [
-            'model' => $model,
-        ]);
     }
 
     /**
