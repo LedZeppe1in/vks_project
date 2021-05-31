@@ -14,11 +14,6 @@ use yii\base\Model;
  */
 class CloudDriveForm extends Model
 {
-    // Название файла для хранения ссылки на электронную таблицу на Google-диске
-    const GOOGLE_SPREADSHEET_FILE_NAME = 'google-spreadsheet-path.txt';
-    // Название файла для хранения пути к электронной таблице на Yandex-диске
-    const YANDEX_SPREADSHEET_FILE_NAME = 'yandex-spreadsheet-path.txt';
-
     public $googleFileLink; // Ссылка на файл Google-таблицы
     public $yandexFilePath; // Путь к файлу Yandex-таблицы
     public $fromDate;       // Дата начала для выборки

@@ -14,8 +14,8 @@ use yii\bootstrap\ActiveForm;
 use yii\data\ArrayDataProvider;
 use app\models\User;
 use app\models\LoginForm;
-use app\models\ContactForm;
 use app\models\BalanceForm;
+use app\models\DefaultValue;
 use app\models\CloudDriveForm;
 use app\models\NotificationForm;
 use app\components\GoogleSpreadsheet;
@@ -168,14 +168,13 @@ class SiteController extends Controller
             mkdir($path, 0777, true);
         // Формирование модели (формы) CloudDriveForm
         $cloudDriveModel = new CloudDriveForm();
-        // Если существует файл с путем к электронной таблице на Google-диске
-        if (file_exists(Yii::$app->basePath . '/web/' . CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME))
-            $cloudDriveModel->googleFileLink = file_get_contents(Yii::$app->basePath . '/web/' .
-                CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME);
-        // Если существует файл с путем к электронной таблице на Yandex-диске
-        if (file_exists(Yii::$app->basePath . '/web/' . CloudDriveForm::YANDEX_SPREADSHEET_FILE_NAME))
-            $cloudDriveModel->yandexFilePath = file_get_contents(Yii::$app->basePath . '/web/' .
-                CloudDriveForm::YANDEX_SPREADSHEET_FILE_NAME);
+        if (!Yii::$app->user->isGuest) {
+            $defaultValue = DefaultValue::find()->where(['user' => Yii::$app->user->identity->getId()])->one();
+            if (!empty($defaultValue)) {
+                $cloudDriveModel->googleFileLink = $defaultValue->google_file_link;
+                $cloudDriveModel->yandexFilePath = $defaultValue->yandex_file_path;
+            }
+        }
         // Формирование модели (формы) NotificationForm
         $notificationModel = new NotificationForm();
         // Если существует файл с текстом шаблона сообщения, то определяем значение поля текста с этого файла
@@ -486,20 +485,25 @@ class SiteController extends Controller
             if ($cloudDriveModel->load(Yii::$app->request->post()) && $cloudDriveModel->validate()) {
                 // Успешный ввод данных
                 $data['success'] = true;
-                // Пусть до папки с текстовыми файлам путей к электронным таблицам
-                $path = Yii::$app->basePath . '/web/';
-                // Открытие файла на запись чтобы сохранить путь к электронной таблицы на Google-диске
-                $googleFile = fopen($path . CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME, 'w');
-                // Запись в файл путь к электронной таблицы на Google-диске
-                fwrite($googleFile, $cloudDriveModel->googleFileLink);
-                // Закрытие файла
-                fclose($googleFile);
-                // Открытие файла на запись чтобы сохранить путь к электронной таблицы на Yandex-диске
-                $yandexFile = fopen($path . CloudDriveForm::YANDEX_SPREADSHEET_FILE_NAME, 'w');
-                // Запись в файл путь к электронной таблицы на Yandex-диске
-                fwrite($yandexFile, $cloudDriveModel->yandexFilePath);
-                // Закрытие файла
-                fclose($yandexFile);
+                // Если текущий пользователь авторизован
+                if (!Yii::$app->user->isGuest) {
+                    // Поиск значений по-умолчанию для авторизованного пользователя
+                    $defaultValue = DefaultValue::find()->where(['user' => Yii::$app->user->identity->getId()])->one();
+                    // Если есть запись со значениями по-умолчанию
+                    if (!empty($defaultValue)) {
+                        // Обновление записи значений по-умолчанию для авторизованного пользователя
+                        $defaultValue->google_file_link = $cloudDriveModel->googleFileLink;
+                        $defaultValue->yandex_file_path = $cloudDriveModel->yandexFilePath;
+                        $defaultValue->updateAttributes(['google_file_link', 'yandex_file_path']);
+                    } else {
+                        // Создание новой записи значений по-умолчанию для авторизованного пользователя
+                        $defaultValueModel = new DefaultValue();
+                        $defaultValueModel->google_file_link = $cloudDriveModel->googleFileLink;
+                        $defaultValueModel->yandex_file_path = $cloudDriveModel->yandexFilePath;
+                        $defaultValueModel->user = Yii::$app->user->identity->getId();
+                        $defaultValueModel->save();
+                    }
+                }
             } else
                 $data = ActiveForm::validate($cloudDriveModel);
             // Возвращение данных
@@ -903,28 +907,32 @@ class SiteController extends Controller
             $employees = array();
             // Формирование модели (формы) CloudDriveForm
             $cloudDriveModel = new CloudDriveForm();
-            // Если существует файл с путем к электронной таблице на Google-диске
-            if (file_exists(Yii::$app->basePath . '/web/' . CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME)) {
-                // Получение ссылки к электронной таблице на Google-диске
-                $cloudDriveModel->googleFileLink = file_get_contents(Yii::$app->basePath . '/web/' .
-                    CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME);
-                // Пусть до папки с таблицами
-                $path = Yii::$app->basePath . '/web/spreadsheets/';
-                // Пусть до папки с файлом токена для доступа к Google-диску
-                $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
-                // Содание объекта для работы с Google-таблицей
-                $googleSpreadsheet = new GoogleSpreadsheet();
-                // Копирование Google-таблицы на сервер
-                $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer(
-                    $googleOAuthPath,
-                    Yii::$app->session,
-                    $cloudDriveModel->googleFileLink,
-                    $path
-                );
-                // Если нет ошибки при копировании электронной таблицы Google на сервер
-                if ($copyGoogleSuccess) {
-                    // Получение списка сотрудников для оповещения
-                    $employees = $googleSpreadsheet->getEmployeesList($path, [], true);
+            // Если текущий пользователь авторизован
+            if (!Yii::$app->user->isGuest) {
+                // Поиск значений по-умолчанию для авторизованного пользователя
+                $defaultValue = DefaultValue::find()->where(['user' => Yii::$app->user->identity->getId()])->one();
+                // Если есть запись со значениями по-умолчанию
+                if (!empty($defaultValue)) {
+                    // Получение ссылки к электронной таблице на Google-диске
+                    $cloudDriveModel->googleFileLink = $defaultValue->google_file_link;
+                    // Пусть до папки с таблицами
+                    $path = Yii::$app->basePath . '/web/spreadsheets/';
+                    // Пусть до папки с файлом токена для доступа к Google-диску
+                    $googleOAuthPath = Yii::$app->basePath . '/web/google-oauth/';
+                    // Содание объекта для работы с Google-таблицей
+                    $googleSpreadsheet = new GoogleSpreadsheet();
+                    // Копирование Google-таблицы на сервер
+                    $copyGoogleSuccess = $googleSpreadsheet->copySpreadsheetToServer(
+                        $googleOAuthPath,
+                        Yii::$app->session,
+                        $cloudDriveModel->googleFileLink,
+                        $path
+                    );
+                    // Если нет ошибки при копировании электронной таблицы Google на сервер
+                    if ($copyGoogleSuccess) {
+                        // Получение списка сотрудников для оповещения
+                        $employees = $googleSpreadsheet->getEmployeesList($path, [], true);
+                    }
                 }
             }
 
@@ -1071,6 +1079,15 @@ class SiteController extends Controller
         ]);
     }
 
+    /**
+     *
+     *
+     * @return string
+     * @throws \Box\Spout\Common\Exception\IOException
+     * @throws \Box\Spout\Common\Exception\UnsupportedTypeException
+     * @throws \Box\Spout\Reader\Exception\ReaderNotOpenedException
+     * @throws \Google_Exception
+     */
     public function actionGeneralInformation()
     {
         // Установка времени выполнения скрипта в 3 часа
@@ -1078,18 +1095,15 @@ class SiteController extends Controller
 
         // Пусть до папки с таблицами
         $path = Yii::$app->basePath . '/web/spreadsheets/';
-
         // Формирование модели (формы) CloudDriveForm
         $cloudDriveModel = new CloudDriveForm();
-        // Если существует файл с путем к электронной таблице на Google-диске
-        if (file_exists(Yii::$app->basePath . '/web/' . CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME))
-            $cloudDriveModel->googleFileLink = file_get_contents(Yii::$app->basePath . '/web/' .
-                CloudDriveForm::GOOGLE_SPREADSHEET_FILE_NAME);
-        // Если существует файл с путем к электронной таблице на Yandex-диске
-        if (file_exists(Yii::$app->basePath . '/web/' . CloudDriveForm::YANDEX_SPREADSHEET_FILE_NAME))
-            $cloudDriveModel->yandexFilePath = file_get_contents(Yii::$app->basePath . '/web/' .
-                CloudDriveForm::YANDEX_SPREADSHEET_FILE_NAME);
-
+        if (!Yii::$app->user->isGuest) {
+            $defaultValue = DefaultValue::find()->where(['user' => Yii::$app->user->identity->getId()])->one();
+            if (!empty($defaultValue)) {
+                $cloudDriveModel->googleFileLink = $defaultValue->google_file_link;
+                $cloudDriveModel->yandexFilePath = $defaultValue->yandex_file_path;
+            }
+        }
         // Формирование модели (формы) NotificationForm
         $notificationModel = new NotificationForm();
         // Если существует файл с текстом шаблона общего сообщения сотрудникам,
