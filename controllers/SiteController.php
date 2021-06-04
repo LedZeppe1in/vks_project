@@ -745,6 +745,8 @@ class SiteController extends Controller
                         // Формирование конкретного сообщения из шаблона путем замены подстрок
                         $message = str_replace($search, $replace, $notificationModel->messageTemplate);
                     }
+                    // Удаление в сообщении кавычек
+                    $message = str_replace(['«', '»', '"', '`', "'"], '', $message);
                     // Формирование параметров для POST-запроса к СМС-Органайзеру
                     $parameters = array(
                         'login' => NotificationForm::LOGIN,
@@ -973,16 +975,21 @@ class SiteController extends Controller
                                 array_push($currentValues, $strReplace);
 
                             // Если сформирован список всех сотрудников, то добавление ФИО в массив для GridView
+                            $employee_exist = false;
                             if (!empty($employees))
                                 foreach ($employees as $employee) {
-                                    $foo = null;
+                                    $employeeFullName = null;
                                     foreach ($employee as $key_e => $value_e) {
                                         if ($key_e == 0)
-                                            $foo = $value_e;
-                                        if ($key_e == 2 && $key == 0 && $value_e == $strReplace)
-                                            array_push($currentValues, $foo);
+                                            $employeeFullName = $value_e;
+                                        if ($key_e == 2 && $key == 0 && $value_e == $strReplace) {
+                                            array_push($currentValues, $employeeFullName);
+                                            $employee_exist = true;
+                                        }
                                     }
                                 }
+                            if ($employee_exist == false && $key == 0)
+                                array_push($currentValues, "-");
 
                             // Определение статистики сообщений
                             if ($key == 3 && $strReplace == 1)
