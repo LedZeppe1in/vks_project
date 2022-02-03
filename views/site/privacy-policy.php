@@ -3,6 +3,7 @@
 /* @var $this yii\web\View */
 
 $this->title = 'Политика конфиденциальности';
+$this->params['breadcrumbs'][] = $this->title;
 
 use yii\helpers\Html;
 ?>

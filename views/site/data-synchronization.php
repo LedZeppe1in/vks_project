@@ -6,6 +6,7 @@
 /* @var $employees app\models\NotificationForm */
 
 $this->title = 'Синхронизация данных';
+$this->params['breadcrumbs'][] = $this->title;
 
 use yii\helpers\Html;
 use yii\bootstrap\Tabs;
@@ -288,7 +289,7 @@ use yii\bootstrap\Tabs;
             $.ajax({
                 url: "<?= Yii::$app->request->baseUrl . '/get-mailing-list' ?>",
                 type: "post",
-                data: form.serialize(),
+                data: form.serialize() + "&all_employees=false",
                 dataType: "json",
                 success: function(data) {
                     // Если валидация прошла успешно (нет ошибок ввода)

@@ -30,6 +30,9 @@ class NotificationForm extends Model
     // Название файла для хранения текста шаблона сообщения
     const MESSAGE_TEMPLATE_FILE_NAME = 'message-template.txt';
 
+    // Название файла для хранения текста шаблона общего сообщения сотрудникам
+    const GENERAL_MESSAGE_TEMPLATE_FILE_NAME = 'general-message-template.txt';
+
     public $messageTemplate; // Шаблон текста сообщения
 
     /**

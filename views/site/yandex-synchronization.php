@@ -5,6 +5,7 @@
 /* @var $addedRows app\controllers\SiteController */
 
 $this->title = 'Система управления заявками и информирования';
+$this->params['breadcrumbs'][] = $this->title;
 
 use yii\helpers\Html;
 use yii\bootstrap\Tabs;

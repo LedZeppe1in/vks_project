@@ -28,9 +28,10 @@ $config = [
             //'class' => 'app\components\LangUrlManager',
             'rules' => [
                 '/' => 'site/index',
-                'login' => 'site/login',
+                'sing-in' => 'site/sing-in',
+                '/user/<_usr:(list|create)>' => 'user/<_usr>',
+                '/user/<_usr:(view|update|delete|profile|update-profile|change-password)>/<id:\d+>' => 'user/<_usr>',
                 'privacy-policy' => 'site/privacy-policy',
-                'contact' => 'site/contact',
                 'checking' => 'site/checking',
                 'save-paths' => 'site/save-paths',
                 'get-mailing-list' => 'site/get-mailing-list',
@@ -40,6 +41,8 @@ $config = [
                 'check-message-status' => 'site/check-message-status',
                 'data-synchronization' => 'site/data-synchronization',
                 'balance-replenishment' => 'site/balance-replenishment',
+                'general-information' => 'site/general-information',
+                'save-general-message-template' => 'site/save-general-message-template',
             ],
         ],
         'cache' => [
@@ -48,6 +51,7 @@ $config = [
         'user' => [
             'identityClass' => 'app\models\User',
             'enableAutoLogin' => true,
+            'loginUrl' => ['site/sing-in'],
         ],
         'errorHandler' => [
             'errorAction' => 'site/error',

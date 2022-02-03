@@ -23,6 +23,7 @@ class NotificationResultForm extends Model
 
     public $fromDateTime; // Дата и время начала для выборки
     public $toDateTime;   // Дата и время окончания для выборки
+    public $period;       // Период времени
 
     /**
      * @return array the validation rules.
@@ -32,6 +33,7 @@ class NotificationResultForm extends Model
         return [
             [['fromDateTime', 'toDateTime'], 'required'],
             [['fromDateTime', 'toDateTime'], 'date', 'format' => 'php:d.m.Y H:i'],
+            ['period', 'safe']
         ];
     }
 
@@ -43,6 +45,7 @@ class NotificationResultForm extends Model
         return [
             'fromDateTime' => 'Дата и время начала',
             'toDateTime' => 'Дата и время окончания',
+            'period' => 'Период',
         ];
     }
 
@@ -54,13 +57,13 @@ class NotificationResultForm extends Model
     public static function getAllStatuses()
     {
         return [
-            self::ERROR_STATUS => 'Ошибка',
-            self::DELIVERED_STATUS => 'Доставлено',
-            self::SENT_STATUS => 'Отправлено',
-            self::QUEUE_STATUS => 'В очереди',
-            self::UNKNOWN_STATUS => 'Неизвестен',
-            self::REJECTED_STATUS => 'Отклонено',
-            self::EXPIRED_STATUS => 'Просрочено',
+            self::ERROR_STATUS => '<p style="color: red">Ошибка</p>',
+            self::DELIVERED_STATUS => '<p style="color: green">Доставлено</p>',
+            self::SENT_STATUS => '<p style="color: blue">Отправлено</p>',
+            self::QUEUE_STATUS => '<p style="color: blue">В очереди</p>',
+            self::UNKNOWN_STATUS => '<p style="color: red">Неизвестен</p>',
+            self::REJECTED_STATUS => '<p style="color: red">Отклонено</p>',
+            self::EXPIRED_STATUS => '<p style="color: red">Просрочено</p>',
         ];
     }
 
