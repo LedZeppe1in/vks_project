@@ -163,12 +163,15 @@ class GoogleSpreadsheet
                             $body,
                             ['valueInputOption' => 'RAW']
                         );
-                        if (count($yandexSpreadsheetRows) < 50)
+                        if (count($yandexSpreadsheetRows) <= 50)
                             // Ожидание в 0,25 секунды
                             usleep(250000);
-                        if (count($yandexSpreadsheetRows) > 50)
+                        if (count($yandexSpreadsheetRows) > 50 && count($yandexSpreadsheetRows) <= 100)
                             // Ожидание в 1 секунду
                             sleep(1);
+                        if (count($yandexSpreadsheetRows) > 100)
+                            // Ожидание в 1,25 секунды
+                            usleep(1250000);
                     }
                 }
 
